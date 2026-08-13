@@ -319,7 +319,7 @@ class DatabaseSeeder extends Seeder
                         'warehouse_zone_id'   => $zone->id,
                         'rack_code'           => $rackCode,
                         'block_code'          => $blockId,
-                        'sloc_code'           => '7AA' . ($columns ? array_search($col, $columns, true) + 1 : 1),
+                        'sloc_code'           => $this->slocCode($whData['code'], $blockId),
                         'area_code'          => $this->areaCode($blockId),
                         'max_weight_tons'     => 50.0, // Each block supports up to 50 Tons
                         'current_weight_tons' => 0.0,
@@ -377,5 +377,20 @@ class DatabaseSeeder extends Seeder
             $column <= 'H' => $row === 1 ? 'B1' : 'B2',
             default => $row === 1 ? 'C1' : 'C2',
         };
+    }
+
+    private function slocCode(string $warehouseCode, string $blockCode): string
+    {
+        $prefix = match ($warehouseCode) {
+            'GUDANG-1' => '7A',
+            'GUDANG-2' => '7B',
+            'GUDANG-3' => '7C',
+            'GUDANG-4' => '7D',
+        };
+        $column = $blockCode[0];
+        $row = (int) substr($blockCode, 1);
+        $group = $column <= 'D' ? 'A' : ($column <= 'H' ? 'B' : 'C');
+
+        return $prefix . $group . ($row === 1 ? '1' : '2');
     }
 }
