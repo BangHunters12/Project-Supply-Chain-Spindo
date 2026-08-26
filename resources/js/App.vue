@@ -1,5 +1,5 @@
 <template>
-  <div :data-theme="darkMode ? 'dark' : 'light'" :class="darkMode ? 'bg-iron-950 text-iron-300' : 'bg-slate-50 text-slate-800'" class="min-h-screen font-display antialiased transition-colors">
+  <div :data-theme="darkMode ? 'dark' : 'light'" :class="darkMode ? 'bg-iron-950 text-iron-300' : 'bg-wms-bg text-wms-ink'" class="min-h-screen font-display antialiased transition-colors">
     
     <Navbar
       :dark-mode="darkMode"
@@ -21,13 +21,13 @@
     >
       <div
         v-if="toastMessage"
-        class="fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded bg-iron-900 border border-iron-700 text-xs font-mono text-iron-200 shadow-lg"
+        class="fixed bottom-5 right-5 z-50 max-w-[min(24rem,calc(100vw-2rem))] border-l-4 border-wms-blue bg-wms-navy px-4 py-3 text-xs font-medium text-white shadow-md"
       >
         {{ toastMessage }}
       </div>
     </Transition>
 
-    <main class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6">
+    <main class="mx-auto max-w-screen-2xl px-4 py-5 sm:px-6 sm:py-7">
 
       <!-- ======================= DENAH & MAPPING GUDANG LANDING PAGE ======================= -->
       <div>
@@ -38,7 +38,7 @@
 
     </main>
 
-    <footer class="mt-16 border-t border-iron-800 py-4 text-center text-[11px] font-mono text-iron-600">
+    <footer class="mt-12 border-t border-wms-border py-5 text-center text-[11px] font-mono text-wms-muted dark:border-iron-800 dark:text-iron-600">
       PT Steel Pipe Industry of Indonesia Tbk (SPINDO) &mdash; WMS SC-U7 &copy; 2026
     </footer>
   </div>

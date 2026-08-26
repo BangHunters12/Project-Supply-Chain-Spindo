@@ -3,8 +3,16 @@
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 @theme {
-  --font-display: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --color-wms-navy: #12304A;
+  --color-wms-blue: #1769AA;
+  --color-wms-bg: #F5F7F9;
+  --color-wms-ink: #263746;
+  --color-wms-muted: #5B6B79;
+  --color-wms-border: #D7E0E7;
+  --color-wms-purple: #7C3AED;
 
   --color-iron-950: #0A0F1C;
   --color-iron-900: #141B2D;
@@ -20,4 +28,20 @@
   --color-safety: #EAB308;
   --color-steel-blue: #1E40AF;
   --color-steel-blue-light: #3B82F6;
+}
+
+@layer base {
+  :focus-visible { outline: 3px solid #1769AA; outline-offset: 3px; }
+  body { background: #F5F7F9; color: #263746; }
+
+  [data-theme='dark'] body { background: #0A0F1C; color: #CBD5E1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }

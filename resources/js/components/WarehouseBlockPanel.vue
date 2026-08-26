@@ -1,13 +1,13 @@
 <template>
-  <div class="fixed inset-0 z-50 bg-black/50 p-0 sm:p-5" @click.self="$emit('close')">
-    <aside class="ml-auto flex h-full w-full max-w-xl flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 sm:rounded-xl sm:border">
-      <div class="flex items-start justify-between gap-4 border-b border-slate-200 p-5 dark:border-zinc-800">
+  <div class="fixed inset-0 z-50 bg-black/60 p-0 sm:p-5" role="presentation" @click.self="$emit('close')" @keydown.esc="$emit('close')">
+    <aside ref="panel" class="ml-auto flex h-full w-full max-w-xl flex-col border-l border-wms-border bg-white shadow-lg dark:border-iron-700 dark:bg-iron-900 sm:border" role="dialog" aria-modal="true" :aria-labelledby="`block-panel-title-${block.id}`" tabindex="-1">
+      <div class="flex items-start justify-between gap-4 border-b border-wms-border p-5 dark:border-zinc-800">
         <div>
           <p class="text-[10px] font-black uppercase tracking-[0.18em] text-safety">{{ warehouse.code }} / block detail</p>
-          <h2 class="mt-1 text-2xl font-black text-steel-900 dark:text-white">Blok {{ block.code }}</h2>
+          <h2 :id="`block-panel-title-${block.id}`" class="mt-1 text-2xl font-black text-wms-navy dark:text-white">Blok {{ block.code }}</h2>
           <p class="mt-1 font-mono text-xs text-slate-500 dark:text-zinc-400">SLOC <strong class="text-spindo dark:text-cyan-300">{{ block.sloc_code || '-' }}</strong> · Area {{ block.area_code || '-' }}</p>
         </div>
-        <button type="button" @click="$emit('close')" class="rounded-md border border-slate-300 px-3 py-2 font-mono text-[10px] font-bold text-slate-500 hover:border-spindo-red hover:text-spindo-red dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-cyan-300 dark:hover:text-cyan-300">ESC</button>
+        <button type="button" @click="$emit('close')" class="rounded-md border border-slate-300 px-3 py-2 font-mono text-[10px] font-bold text-slate-500 hover:border-spindo-red hover:text-spindo-red dark:border-iron-700 dark:text-iron-400 dark:hover:border-cyan-300 dark:hover:text-cyan-300" aria-label="Tutup rincian blok">Tutup <span aria-hidden="true">(Esc)</span></button>
       </div>
       <div class="grid grid-cols-3 gap-px border-b border-slate-200 bg-slate-200 dark:border-zinc-800 dark:bg-zinc-800">
         <div class="bg-white p-4 dark:bg-zinc-950"><span class="block text-[9px] font-black uppercase text-slate-500 dark:text-zinc-500">Bundle</span><strong class="mt-1 block font-mono text-lg dark:text-white">{{ block.inventories.length }}</strong></div>
@@ -29,15 +29,19 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
 const props = defineProps({
   block: { type: Object, required: true },
   warehouse: { type: Object, required: true },
 });
 
+const panel = ref(null);
+
 defineEmits(['close']);
 
 const totalPcs = computed(() => props.block.inventories.reduce((sum, item) => sum + Number(item.qty_pcs || 0), 0));
 const totalTons = computed(() => (props.block.inventories.reduce((sum, item) => sum + Number(item.total_weight_kg || 0), 0) / 1000).toFixed(2));
+
+nextTick(() => panel.value?.focus());
 </script>
