@@ -30,7 +30,7 @@ class PrintController extends Controller
                 foreach ($rack->inventories as $inv) {
                     if ($inv->product) {
                         $catName = $inv->product->category ? $inv->product->category->name : 'PIPA';
-                        $size = $inv->product->nominal_size;
+                        $size = $inv->product->nominal_size . '"';
                         $spec = $inv->product->spec_name;
                         
                         $desc = trim("{$catName} {$size} {$spec}");
@@ -38,7 +38,7 @@ class PrintController extends Controller
                     }
                 }
                 
-                $pipes = array_unique($pipes);
+                $pipes = array_values(array_unique($pipes));
                 $content = empty($pipes) ? '-' : implode(' + ', $pipes);
 
                 $groups[$letter][$number] = [

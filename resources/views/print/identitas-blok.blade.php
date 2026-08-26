@@ -10,12 +10,6 @@
             margin: 20px;
             font-size: 11px;
         }
-        .header-title {
-            text-align: center;
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
         table {
             width: 100%;
             max-width: 400px; /* Dipersempit agar proporsinya seperti strip vertikal di foto */
@@ -45,11 +39,19 @@
             print-color-adjust: exact;
         }
         .footer-date {
-            text-align: center;
+            width: 100%;
+            max-width: 400px;
+            margin: 15px auto 0;
+            text-align: right;
             font-size: 10px;
             font-weight: bold;
-            margin-top: 15px;
             color: #555;
+        }
+        .warehouse-label {
+            margin: 0 0 8px;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
         }
         .page-break {
             break-before: page;
@@ -66,8 +68,7 @@
     </style>
 </head>
 <body onload="window.print()">
-    <div class="header-title">IDENTITAS PIPA PER BLOK</div>
-    
+    <div class="warehouse-label">{{ explode(' / ', $gudang->name)[0] }}</div>
     <table>
         <tbody>
             @foreach($groups as $letter => $blocks)
@@ -87,6 +88,6 @@
         </tbody>
     </table>
 
-    <div class="footer-date">PRINTED ON: {{ now()->format('d/m/Y') }}</div>
+    <div class="footer-date">PRINTED ON {{ now('Asia/Jakarta')->format('d/m/Y') }} | {{ now('Asia/Jakarta')->format('H:i') }} WIB</div>
 </body>
 </html>
