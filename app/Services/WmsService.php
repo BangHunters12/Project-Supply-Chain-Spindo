@@ -47,7 +47,7 @@ class WmsService
                     'sloc_code' => $rack->sloc_code,
                     'area_code' => $rack->area_code,
                     'max_weight_tons' => (float) $rack->max_weight_tons,
-                    'current_weight_tons' => (float) $rack->current_weight_tons,
+                    'current_weight_tons' => (float) ($rack->inventories->sum('total_weight_kg') / 1000),
                     'status' => $rack->status,
                     'inventories' => $rack->inventories->map(fn (PipeInventory $inventory) => [
                         'id' => $inventory->id,
