@@ -20,6 +20,12 @@ class WarehouseRack extends Model
         'max_weight_tons',
         'current_weight_tons',
         'status',
+        'sikuta_blok_id',
+        'last_synced_at',
+    ];
+
+    protected $casts = [
+        'last_synced_at' => 'datetime',
     ];
 
     public function zone(): BelongsTo

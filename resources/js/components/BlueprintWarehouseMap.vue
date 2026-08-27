@@ -15,8 +15,9 @@
     <div v-if="errorMessage" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{{ errorMessage }} <button type="button" @click="loadMap" class="ml-2 font-bold underline">Coba lagi</button></div>
     <div v-else-if="loading" class="rounded-lg border border-slate-200 bg-white px-4 py-16 text-center font-mono text-xs text-slate-500 dark:border-iron-800 dark:bg-iron-900 dark:text-iron-400">Memuat blueprint gudang...</div>
 
-    <div v-else class="overflow-x-auto rounded-lg border border-slate-300 bg-white p-2 shadow-sm dark:border-iron-700 dark:bg-[#07131c] sm:p-4">
-      <div class="min-w-[920px]">
+    <div v-else class="relative overflow-x-auto rounded-lg border border-slate-300 bg-white p-2 shadow-sm dark:border-iron-700 dark:bg-[#07131c] sm:p-4">
+      <div class="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent dark:from-[#07131c] pointer-events-none md:hidden"></div>
+      <div class="min-w-[800px] pb-4">
         <div class="mb-2 flex items-center justify-between px-2 font-mono text-[9px] uppercase tracking-[0.15em] text-slate-500 dark:text-cyan-200/60"><span>PT SPINDO Tbk - Unit 7 Gresik</span><span>GUDANG 1-4 / FLOOR PLAN</span></div>
 
         <svg v-if="!activeWarehouse" viewBox="0 0 1200 1240" class="h-auto w-full" role="img" aria-label="Denah gedung 100 meter dengan fasilitas dan empat gudang">
@@ -103,7 +104,10 @@
       </div>
     </div>
 
-    <div class="rounded border border-slate-200 bg-white px-3 py-2 font-mono text-[10px] text-slate-500 dark:border-iron-800 dark:bg-iron-900 dark:text-iron-400">Tip: pilih Gudang 1-4, lalu tekan blok pada blueprint.</div>
+    <div class="rounded border border-slate-200 bg-white px-3 py-2 font-mono text-[10px] text-slate-500 dark:border-iron-800 dark:bg-iron-900 dark:text-iron-400">
+      <span class="md:hidden">↔️ Geser untuk melihat keseluruhan denah. </span>
+      Tip: pilih Gudang 1-4, lalu tekan blok pada blueprint.
+    </div>
     <WarehouseBlockPanel v-if="selectedBlock && activeWarehouse" :block="selectedBlock" :warehouse="activeWarehouse" @close="selectedBlock = null" />
   </section>
 </template>
@@ -152,4 +156,6 @@ function masterBlockBox(index, block) {
 function detailBlockBox(block) { const column = blockColumn(block); const row = blockRow(block); return column < 8 ? { x: 98 + column * 75, y: row === 0 ? 205 : row === 1 ? 370 : 485, width: 66, height: 52 } : { x: 824 + (column - 8) * 68, y: row === 0 ? 205 : row === 1 ? 370 : 485, width: 60, height: 52 }; }
 
 onMounted(loadMap);
+
+defineExpose({ loadMap });
 </script>

@@ -23,6 +23,9 @@ class PipeInventory extends Model
         'status',
         'qc_status',
         'inbound_date',
+        'sikuta_kode_material',
+        'status_fifo',
+        'hari_penyimpanan',
     ];
 
     public function product(): BelongsTo
@@ -35,8 +38,4 @@ class PipeInventory extends Model
         return $this->belongsTo(WarehouseRack::class, 'warehouse_rack_id');
     }
 
-    public function movements(): HasMany
-    {
-        return $this->hasMany(StockMovement::class);
-    }
 }

@@ -10,25 +10,25 @@
           <span :class="darkMode ? 'text-iron-400' : 'text-slate-500'" class="font-mono text-[11px] tracking-wider">WMS SC-U7 PIPE</span>
         </div>
 
-        <!-- Desktop Navigation -->
-        <nav class="hidden md:flex items-center space-x-1">
-          <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            @click="$emit('change-tab', tab.id)"
-            :class="[
-               'rounded px-3 py-1.5 text-xs font-display font-medium transition-colors',
-               activeTab === tab.id
-                 ? (darkMode ? 'bg-iron-800 text-iron-200' : 'bg-slate-100 text-slate-900')
-                 : (darkMode ? 'text-iron-400 hover:text-iron-200' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900')
-            ]"
-          >
-            {{ tab.label }}
-          </button>
-        </nav>
+
 
         <!-- Right Controls -->
         <div class="flex items-center space-x-2">
+          <!-- SIKUTA Sync Status -->
+          <div v-if="syncInfo" class="hidden sm:flex items-center space-x-1.5 mr-1">
+            <span class="h-1.5 w-1.5 rounded-full" :class="syncInfo.mode === 'live' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'"></span>
+            <span :class="darkMode ? 'text-iron-500' : 'text-slate-400'" class="font-mono text-[9px] tracking-wider">{{ syncInfo.mode === 'live' ? 'SIKUTA LIVE' : 'DEMO' }}</span>
+          </div>
+          <button
+            @click="$emit('sync-sikuta')"
+            :disabled="syncing"
+            :class="darkMode ? 'text-iron-400 hover:bg-iron-800 hover:text-safety' : 'text-slate-500 hover:bg-slate-100 hover:text-amber-600'"
+            class="rounded p-1.5 transition relative"
+            title="Sync dari SIKUTA"
+          >
+            <svg :class="syncing ? 'animate-spin' : ''" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            <span v-if="syncing" class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-safety animate-ping"></span>
+          </button>
           <button
             @click="$emit('toggle-theme')"
             :class="darkMode ? 'text-iron-400 hover:bg-iron-800 hover:text-iron-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'"
@@ -49,39 +49,17 @@
         </div>
       </div>
 
-      <!-- Mobile Navigation -->
-      <div class="md:hidden flex space-x-1 overflow-x-auto pb-2 -mx-1">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          @click="$emit('change-tab', tab.id)"
-          :class="[
-               'rounded px-3 py-1.5 text-xs font-display font-medium whitespace-nowrap transition-colors',
-               activeTab === tab.id
-                 ? (darkMode ? 'bg-iron-800 text-iron-200' : 'bg-slate-100 text-slate-900')
-                 : (darkMode ? 'text-iron-400' : 'text-slate-500')
-          ]"
-        >
-          {{ tab.label }}
-        </button>
-      </div>
+
     </div>
   </header>
 </template>
 
 <script setup>
 defineProps({
-  activeTab: { type: String, required: true },
   darkMode: { type: Boolean, default: false },
+  syncInfo: { type: Object, default: null },
+  syncing: { type: Boolean, default: false },
 });
 
-defineEmits(['change-tab', 'refresh', 'toggle-theme']);
-
-const tabs = [
-  { id: 'map', label: 'Denah & Mapping Gudang' },
-  { id: 'dashboard', label: 'Dashboard Analitik' },
-  { id: 'inventory', label: 'Daftar Stok Pipa' },
-  { id: 'inbound', label: 'Penerimaan Mill' },
-  { id: 'outbound', label: 'Surat Jalan' },
-];
+defineEmits(['refresh', 'toggle-theme', 'sync-sikuta']);
 </script>
