@@ -187,16 +187,19 @@ class SyncAppSheetData extends Command
                 ['name' => $categoryCode === 'PG' ? 'Pipa Galvanis' : 'Pipa Hitam']
             );
 
+            $ukuran = $row['Ukuran'] ?? '';
+            $pcsPerBundle = $this->getPcsPerBundle($ukuran);
+
             PipeProduct::updateOrCreate(
                 ['sap_code' => $kodeProduk],
                 [
                     'pipe_category_id' => $category->id,
-                    'nominal_size' => $row['Ukuran'] ?? '',
+                    'nominal_size' => $ukuran,
                     'spec_name' => $row['Class'] ?? $row['Pengerjaan'] ?? '',
                     'outer_diameter_mm' => 0,
                     'wall_thickness_min' => 0,
                     'wall_thickness_max' => 0,
-                    'pcs_per_bundle' => 0,
+                    'pcs_per_bundle' => $pcsPerBundle,
                     'length_meters' => 6.00,
                 ]
             );
@@ -257,17 +260,27 @@ class SyncAppSheetData extends Command
                         ['name' => $categoryCode === 'PG' ? 'Pipa Galvanis' : 'Pipa Hitam']
                     );
 
+                    $ukuran = $row['Ukuran'] ?? '';
+                    $pcsPerBundle = $this->getPcsPerBundle($ukuran);
+
                     $product = PipeProduct::create([
                         'pipe_category_id' => $category->id,
                         'sap_code' => $kodeMaterial,
-                        'nominal_size' => $row['Ukuran'] ?? '',
+                        'nominal_size' => $ukuran,
                         'spec_name' => $row['Kelas'] ?? '',
                         'outer_diameter_mm' => 0,
                         'wall_thickness_min' => 0,
                         'wall_thickness_max' => 0,
-                        'pcs_per_bundle' => 0,
+                        'pcs_per_bundle' => $pcsPerBundle,
                         'length_meters' => 6.00,
                     ]);
+                }
+
+                // Hitung jumlah bundle
+                $qtyBundles = 1;
+                if ($product->pcs_per_bundle > 0) {
+                    // Maksimal minimal 1 bundle, atau hitung proporsional (pembulatan ke atas jika ada sisa batang)
+                    $qtyBundles = max(1, ceil($totalStok / $product->pcs_per_bundle));
                 }
 
                 // Upsert inventory — use composite key of rack + product
@@ -280,7 +293,7 @@ class SyncAppSheetData extends Command
                         'warehouse_rack_id' => $rack->id,
                         'heat_number' => 'SIKUTA-SYNC',
                         'mill_source' => 'SIKUTA Import',
-                        'qty_bundles' => 1,
+                        'qty_bundles' => $qtyBundles,
                         'qty_pcs' => $totalStok,
                         'total_weight_kg' => $tonaseKg,
                         'status' => 'AVAILABLE',
@@ -316,5 +329,32 @@ class SyncAppSheetData extends Command
             $col <= 'H' => $row === 1 ? 'B1' : 'B2',
             default => $row === 1 ? 'C1' : 'C2',
         };
+    }
+
+    /**
+     * Get default pcs per bundle based on diameter mapping
+     */
+    protected function getPcsPerBundle(string $ukuran): int
+    {
+        $bundleMap = [
+            '1/2' => 217,
+            '3/4' => 169,
+            '1' => 127,
+            '1-1/4' => 91,
+            '1-1/2' => 61,
+            '2' => 61,
+            '2-1/2' => 37,
+            '3' => 37,
+            '4' => 19,
+            '5' => 10,
+            '6' => 10,
+            '8' => 7,
+        ];
+
+        // Ekstrak ukuran inci dari string (misal: "2" SCH-40" -> "2", "1-1/2" LGH" -> "1-1/2")
+        // Hapus kutip ganda dan ambil kata pertama
+        $cleanUkuran = trim(str_replace('"', '', explode(' ', $ukuran)[0]));
+        
+        return $bundleMap[$cleanUkuran] ?? 0;
     }
 }
