@@ -18,7 +18,7 @@
         }
         table {
             width: 100%;
-            max-width: 600px;
+            max-width: 400px; /* Dipersempit agar proporsinya seperti strip vertikal di foto */
             margin: 0 auto;
             border-collapse: collapse;
             table-layout: fixed;
@@ -26,9 +26,10 @@
         th, td {
             border: 2px solid #000;
             text-align: center;
-            padding: 5px;
+            padding: 3px; /* Kurangi padding agar pas */
             vertical-align: middle;
             word-wrap: break-word;
+            font-size: 10px; /* Font agak kecil agar muat di kotak sempit */
         }
         .block-header {
             background-color: #e47867 !important; /* Warna merah bata/oranye sesuai foto */
@@ -38,7 +39,7 @@
             print-color-adjust: exact;
         }
         .block-content {
-            height: 60px; /* Dikurangi agar muat pas 2 lembar */
+            height: 85px; /* Ditinggikan agar full sampai ke bawah halaman */
             background-color: #fff !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
