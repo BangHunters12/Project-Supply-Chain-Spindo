@@ -38,10 +38,20 @@
             print-color-adjust: exact;
         }
         .block-content {
-            height: 80px; /* Sesuai proporsi di foto agar sel cukup tinggi */
+            height: 100px; /* Sesuai proporsi di foto agar sel cukup tinggi */
             background-color: #fff !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
+        }
+        .footer-date {
+            text-align: center;
+            font-size: 10px;
+            font-weight: bold;
+            margin-top: 15px;
+            color: #555;
+        }
+        .page-break {
+            break-before: page;
         }
         @media print {
             body {
@@ -61,7 +71,7 @@
         <tbody>
             @foreach($groups as $letter => $blocks)
                 <!-- Header Row untuk Grup Blok (misal: A3, A2, A1) -->
-                <tr>
+                <tr class="{{ $letter === 'I' ? 'page-break' : '' }}">
                     @foreach($blocks as $block)
                         <th class="block-header">{{ $block['code'] }}</th>
                     @endforeach
@@ -75,5 +85,7 @@
             @endforeach
         </tbody>
     </table>
+
+    <div class="footer-date">PRINTED ON: {{ now()->format('d/m/Y') }}</div>
 </body>
 </html>
