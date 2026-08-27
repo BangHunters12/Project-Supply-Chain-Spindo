@@ -25,21 +25,29 @@ class PrintController extends Controller
                     $groups[$letter] = [];
                 }
                 
-                // Get unique pipe descriptions
-                $pipes = [];
+                // Get unique pipe descriptions grouped by category
+                $pipesByCategory = [];
                 foreach ($rack->inventories as $inv) {
                     if ($inv->product) {
-                        $catName = $inv->product->category ? $inv->product->category->name : 'PIPA';
+                        $catName = strtoupper(trim($inv->product->category ? $inv->product->category->name : 'PIPA'));
                         $size = $inv->product->nominal_size . '"';
-                        $spec = $inv->product->spec_name;
+                        $spec = strtoupper(trim($inv->product->spec_name));
                         
-                        $desc = trim("{$catName} {$size} {$spec}");
-                        $pipes[] = strtoupper($desc);
+                        $desc = trim("{$size} {$spec}");
+                        if (!isset($pipesByCategory[$catName])) {
+                            $pipesByCategory[$catName] = [];
+                        }
+                        if (!in_array($desc, $pipesByCategory[$catName])) {
+                            $pipesByCategory[$catName][] = $desc;
+                        }
                     }
                 }
                 
-                $pipes = array_values(array_unique($pipes));
-                $content = empty($pipes) ? '-' : implode(' + ', $pipes);
+                $finalPipes = [];
+                foreach ($pipesByCategory as $cat => $items) {
+                    $finalPipes[] = $cat . ' ' . implode(' + ', $items);
+                }
+                $content = empty($finalPipes) ? '-' : implode(' + ', $finalPipes);
 
                 $groups[$letter][$number] = [
                     'code' => $blockCode,
