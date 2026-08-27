@@ -8,7 +8,9 @@
       </div>
       <div class="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wide text-slate-500 dark:text-iron-400">
         <span class="h-2 w-2 rounded-full bg-emerald-500"></span> Live WMS
-        <button v-if="activeWarehouse" type="button" @click="closeWarehouse" class="ml-3 rounded border border-slate-300 px-2.5 py-1.5 font-sans font-black text-slate-600 transition hover:border-safety hover:text-safety dark:border-iron-700 dark:text-iron-300">Kembali ke master plan</button>
+        <a v-if="activeWarehouse" :href="`/print/gudang/${activeWarehouse.code}`" target="_blank" class="ml-3 rounded border border-slate-300 bg-white px-2.5 py-1.5 font-sans font-black text-slate-700 transition hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:border-iron-700 dark:bg-iron-800 dark:text-iron-300">🖨️ Cetak Identitas Blok</a>
+        <a v-if="activeWarehouse" :href="`/print/gudang/${activeWarehouse.code}?excel=1`" class="ml-2 rounded border border-slate-300 bg-emerald-50 px-2.5 py-1.5 font-sans font-black text-emerald-700 transition hover:border-emerald-500 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">📊 Excel</a>
+        <button v-if="activeWarehouse" type="button" @click="closeWarehouse" class="ml-2 rounded border border-slate-300 px-2.5 py-1.5 font-sans font-black text-slate-600 transition hover:border-safety hover:text-safety dark:border-iron-700 dark:text-iron-300">Kembali ke master plan</button>
       </div>
     </div>
 
