@@ -65,9 +65,14 @@ class PrintController extends Controller
 
         if ($request->has('excel')) {
             $fileName = "Identitas_Pipa_{$code}.xls";
-            return response()->view('print.identitas-blok', compact('gudang', 'groups'))
-                ->header('Content-Type', 'application/vnd.ms-excel')
-                ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
+            $headers = [
+                'Content-Type' => 'application/vnd.ms-excel',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+                'Pragma' => 'no-cache',
+                'Expires' => '0'
+            ];
+            $html = view('print.identitas-blok', compact('gudang', 'groups'))->render();
+            return response($html, 200, $headers);
         }
 
         return view('print.identitas-blok', compact('gudang', 'groups'));
