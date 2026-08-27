@@ -22,8 +22,8 @@
 
         <svg v-if="!activeWarehouse" viewBox="0 0 1200 1240" class="h-auto w-full" role="img" aria-label="Denah gedung 100 meter dengan fasilitas dan empat gudang">
           <defs>
-            <marker id="master-yellow-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" class="fill-yellow-500" /></marker>
-            <marker id="master-dimension-arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" class="fill-slate-500 dark:fill-cyan-200/60" /></marker>
+            <marker id="master-yellow-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L10 5L0 10Z" class="fill-yellow-500" /></marker>
+            <marker id="master-dimension-arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8Z" class="fill-slate-500 dark:fill-cyan-200/60" /></marker>
           </defs>
           <rect width="1200" height="1240" class="fill-white dark:fill-[#07131c]" />
           <rect x="100" y="180" width="1000" height="1000" rx="2" class="fill-white stroke-slate-700 dark:fill-[#0b2230] dark:stroke-cyan-100/80" stroke-width="4" />
@@ -73,7 +73,7 @@
         </svg>
 
         <svg v-else viewBox="0 0 1200 800" class="h-auto w-full" role="img" :aria-label="`Blueprint ${shortName(activeWarehouse)}`">
-          <defs><marker id="detail-yellow-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" class="fill-yellow-500" /></marker></defs>
+          <defs><marker id="detail-yellow-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L10 5L0 10Z" class="fill-yellow-500" /></marker></defs>
           <rect width="1200" height="800" class="fill-white dark:fill-[#07131c]" />
           <rect x="58" y="62" width="1084" height="680" class="fill-white stroke-slate-700 dark:fill-[#0b2230] dark:stroke-cyan-100/80" stroke-width="4" />
           <path d="M58 126H1142" class="stroke-slate-500 dark:stroke-cyan-200/40" stroke-width="2" />
