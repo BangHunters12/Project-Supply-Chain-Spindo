@@ -30,7 +30,7 @@ class PrintController extends Controller
                 foreach ($rack->inventories as $inv) {
                     if ($inv->product) {
                         $catName = strtoupper(trim($inv->product->category ? $inv->product->category->name : 'PIPA'));
-                        $size = $inv->product->nominal_size . '"';
+                        $size = rtrim($inv->product->nominal_size, '"') . '"';
                         $spec = strtoupper(trim($inv->product->spec_name));
                         
                         $desc = trim("{$size} {$spec}");
