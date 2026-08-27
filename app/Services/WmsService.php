@@ -63,6 +63,7 @@ class WmsService
                             'nominal_size' => $inventory->product->nominal_size,
                             'spec_name' => $inventory->product->spec_name,
                             'category' => $inventory->product->category?->name,
+                            'pcs_per_bundle' => (int) $inventory->product->pcs_per_bundle,
                         ] : null,
                     ]),
                 ]),

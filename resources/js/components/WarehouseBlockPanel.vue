@@ -9,9 +9,10 @@
         </div>
         <button type="button" @click="$emit('close')" class="rounded-md border border-slate-300 px-3 py-2 font-mono text-[10px] font-bold text-slate-500 hover:border-spindo-red hover:text-spindo-red dark:border-iron-700 dark:text-iron-400 dark:hover:border-cyan-300 dark:hover:text-cyan-300" aria-label="Tutup rincian blok">Tutup <span aria-hidden="true">(Esc)</span></button>
       </div>
-      <div class="grid grid-cols-3 gap-px border-b border-slate-200 bg-slate-200 dark:border-zinc-800 dark:bg-zinc-800">
+      <div class="grid grid-cols-4 gap-px border-b border-slate-200 bg-slate-200 dark:border-zinc-800 dark:bg-zinc-800">
         <div class="bg-white p-4 dark:bg-zinc-950"><span class="block text-[9px] font-black uppercase text-slate-500 dark:text-zinc-500">Bundle</span><strong class="mt-1 block font-mono text-lg dark:text-white">{{ totalBundles }}</strong></div>
-        <div class="bg-white p-4 dark:bg-zinc-950"><span class="block text-[9px] font-black uppercase text-slate-500 dark:text-zinc-500">Pieces</span><strong class="mt-1 block font-mono text-lg dark:text-white">{{ totalPcs }}</strong></div>
+        <div class="bg-white p-4 dark:bg-zinc-950"><span class="block text-[9px] font-black uppercase text-slate-500 dark:text-zinc-500">Eceran</span><strong class="mt-1 block font-mono text-lg dark:text-white">{{ totalLoosePcs }}</strong></div>
+        <div class="bg-white p-4 dark:bg-zinc-950"><span class="block text-[9px] font-black uppercase text-slate-500 dark:text-zinc-500">Total Pcs</span><strong class="mt-1 block font-mono text-lg dark:text-white">{{ totalPcs }}</strong></div>
         <div class="bg-white p-4 dark:bg-zinc-950"><span class="block text-[9px] font-black uppercase text-slate-500 dark:text-zinc-500">Weight</span><strong class="mt-1 block font-mono text-lg dark:text-white">{{ totalTons }}T</strong></div>
       </div>
       <div class="flex-1 overflow-y-auto p-5">
@@ -20,7 +21,7 @@
         <div v-else class="space-y-2">
           <article v-for="inventory in block.inventories" :key="inventory.id" class="rounded-lg border border-slate-200 bg-steel-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
             <div class="flex items-start justify-between gap-3"><div><strong class="font-mono text-xs text-spindo dark:text-cyan-300">{{ inventory.bundle_tag }}</strong><p class="mt-1 text-sm font-bold text-steel-900 dark:text-white">{{ inventory.product?.sap_code || '-' }} · {{ inventory.product?.nominal_size || '-' }} · {{ inventory.product?.spec_name || '-' }}</p></div><span :class="inventory.qc_status === 'PASSED' ? 'text-emerald-600 dark:text-emerald-400' : 'text-safety'" class="font-mono text-[9px] font-black">{{ inventory.qc_status }}</span></div>
-            <div class="mt-3 grid grid-cols-2 gap-2 border-t border-slate-200 pt-2 font-mono text-[10px] text-slate-500 dark:border-zinc-800 dark:text-zinc-500"><span>Heat: {{ inventory.heat_number }}</span><span class="text-right">{{ inventory.qty_pcs }} pcs<template v-if="inventory.qty_bundles > 0"> / {{ inventory.qty_bundles }} bdl</template></span><span>{{ inventory.product?.category || '-' }}</span><span class="text-right font-bold text-steel-900 dark:text-zinc-200">{{ (Number(inventory.total_weight_kg || 0) / 1000).toFixed(2) }} Ton</span></div>
+            <div class="mt-3 grid grid-cols-2 gap-2 border-t border-slate-200 pt-2 font-mono text-[10px] text-slate-500 dark:border-zinc-800 dark:text-zinc-500"><span>Heat: {{ inventory.heat_number }}</span><span class="text-right"><template v-if="inventory.qty_bundles > 0">{{ inventory.qty_bundles }} Bdl </template><template v-if="inventory.qty_bundles > 0 && loosePcs(inventory) > 0">+ </template><template v-if="loosePcs(inventory) > 0 || inventory.qty_bundles === 0">{{ loosePcs(inventory) }} Pcs</template></span><span>{{ inventory.product?.category || '-' }}</span><span class="text-right font-bold text-steel-900 dark:text-zinc-200">{{ (Number(inventory.total_weight_kg || 0) / 1000).toFixed(2) }} Ton</span></div>
           </article>
         </div>
       </div>
@@ -40,8 +41,16 @@ const panel = ref(null);
 
 defineEmits(['close']);
 
+const loosePcs = (item) => {
+  const bdl = Number(item.qty_bundles || 0);
+  const ppb = Number(item.product?.pcs_per_bundle || 0);
+  const total = Number(item.qty_pcs || 0);
+  return ppb > 0 ? total - (bdl * ppb) : total;
+};
+
 const totalBundles = computed(() => props.block.inventories.reduce((sum, item) => sum + Number(item.qty_bundles || 0), 0));
 const totalPcs = computed(() => props.block.inventories.reduce((sum, item) => sum + Number(item.qty_pcs || 0), 0));
+const totalLoosePcs = computed(() => props.block.inventories.reduce((sum, item) => sum + loosePcs(item), 0));
 const totalTons = computed(() => (props.block.inventories.reduce((sum, item) => sum + Number(item.total_weight_kg || 0), 0) / 1000).toFixed(2));
 
 nextTick(() => panel.value?.focus());
