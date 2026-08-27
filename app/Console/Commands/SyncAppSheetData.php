@@ -251,6 +251,18 @@ class SyncAppSheetData extends Command
                 $kodeMaterial = $row['Kode Material'] ?? 'UNKNOWN';
                 $product = PipeProduct::where('sap_code', $kodeMaterial)->first();
 
+                // FIX: Update existing products if they have 0 pcs_per_bundle
+                if ($product && $product->pcs_per_bundle == 0) {
+                    $ukuran = $product->nominal_size ?: ($row['Ukuran'] ?? '');
+                    $pcs = $this->getPcsPerBundle($ukuran);
+                    if ($pcs > 0) {
+                        $product->update([
+                            'pcs_per_bundle' => $pcs,
+                            'nominal_size' => $ukuran
+                        ]);
+                    }
+                }
+
                 if (!$product) {
                     // Create a placeholder product
                     $jenisPipa = $row['Jenis Pipa'] ?? 'PIPA';
