@@ -38,7 +38,7 @@
             print-color-adjust: exact;
         }
         .block-content {
-            height: 100px; /* Sesuai proporsi di foto agar sel cukup tinggi */
+            height: 60px; /* Dikurangi agar muat pas 2 lembar */
             background-color: #fff !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
