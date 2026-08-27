@@ -288,11 +288,10 @@ class SyncAppSheetData extends Command
                     ]);
                 }
 
-                // Hitung jumlah bundle
-                $qtyBundles = 1;
+                // Hitung jumlah bundle (hanya hitung bundle utuh)
+                $qtyBundles = 0;
                 if ($product->pcs_per_bundle > 0) {
-                    // Maksimal minimal 1 bundle, atau hitung proporsional (pembulatan ke atas jika ada sisa batang)
-                    $qtyBundles = max(1, ceil($totalStok / $product->pcs_per_bundle));
+                    $qtyBundles = (int) floor($totalStok / $product->pcs_per_bundle);
                 }
 
                 // Upsert inventory — use composite key of rack + product
