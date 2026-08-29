@@ -72,8 +72,15 @@
     <table>
         <tbody>
             @foreach($groups as $letter => $blocks)
+                @if($letter === 'I' && !isset($isExcel))
+                    </tbody>
+                    </table>
+                    <div class="page-break"></div>
+                    <table>
+                    <tbody>
+                @endif
                 <!-- Header Row untuk Grup Blok (misal: A3, A2, A1) -->
-                <tr class="{{ $letter === 'I' ? 'page-break' : '' }}">
+                <tr>
                     @foreach($blocks as $block)
                         <th class="block-header">{{ $block['code'] }}</th>
                     @endforeach

@@ -2,14 +2,15 @@
   <section class="space-y-4">
     <div class="flex flex-col justify-between gap-4 border-b border-wms-border pb-5 dark:border-iron-800 sm:flex-row sm:items-end">
       <div>
-        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-wms-blue">SC-U7 / DENAH OPERASIONAL</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-wms-blue dark:text-sky-400">SC-U7 / DENAH OPERASIONAL</p>
         <h1 class="mt-1 text-2xl font-black tracking-tight text-wms-navy dark:text-iron-100">Denah Gedung Supply Chain</h1>
         <p class="mt-1 max-w-3xl text-sm leading-6 text-wms-muted dark:text-iron-400">Pilih gudang untuk membuka blok, SLOC, dan stok pipa. Pilih blok untuk melihat rincian inventaris.</p>
       </div>
       <div class="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wide text-slate-500 dark:text-iron-400">
         <span class="h-2 w-2 rounded-full bg-emerald-500"></span><span>Data WMS aktif</span>
-        <a v-if="activeWarehouse" :href="`/print/gudang/${activeWarehouse.code}`" target="_blank" class="ml-3 rounded border border-slate-300 bg-white px-2.5 py-1.5 font-sans font-black text-slate-700 transition hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:border-iron-700 dark:bg-iron-800 dark:text-iron-300">🖨️ Cetak Identitas Blok</a>
-        <a v-if="activeWarehouse" :href="`/print/gudang/${activeWarehouse.code}?excel=1`" target="_blank" download class="ml-2 rounded border border-slate-300 bg-emerald-50 px-2.5 py-1.5 font-sans font-black text-emerald-700 transition hover:border-emerald-500 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">📊 Excel</a>
+        <a v-if="activeWarehouse" :href="`/print/gudang/${activeWarehouse.code}`" target="_blank" class="ml-2 rounded border border-slate-300 bg-slate-50 px-2.5 py-1.5 font-sans font-black text-slate-600 transition hover:border-wms-blue hover:bg-sky-50 hover:text-wms-blue dark:border-iron-600 dark:bg-iron-800 dark:text-iron-300 dark:hover:border-cyan-500 dark:hover:bg-cyan-900/40 dark:hover:text-cyan-300">🖨️ Cetak Label</a>
+        <a v-if="activeWarehouse" :href="`/print/gudang/${activeWarehouse.code}?excel=1`" target="_blank" download class="ml-2 rounded border border-slate-300 bg-emerald-50 px-2.5 py-1.5 font-sans font-black text-emerald-700 transition hover:border-emerald-500 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" title="Export Excel Gudang Ini">📊 Excel (Ini)</a>
+        <a href="/print/gudang/all" target="_blank" download class="ml-2 rounded border border-emerald-500 bg-emerald-500 px-2.5 py-1.5 font-sans font-black text-white transition hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-500 shadow-sm" title="Export Semua Gudang (Multi-Sheet)">📊 Excel (Semua)</a>
         <button v-if="activeWarehouse" type="button" @click="closeWarehouse" class="ml-2 rounded border border-slate-300 px-2.5 py-1.5 font-sans font-black text-slate-600 transition hover:border-safety hover:text-safety dark:border-iron-700 dark:text-iron-300">Kembali ke semua gudang</button>
       </div>
     </div>
@@ -113,8 +114,26 @@ function selectBlock(block) { selectedBlock.value = block; }
 function blockColumn(block) { return Math.max(0, (block.code?.charCodeAt(0) || 65) - 65); }
 function blockRow(block) { return Math.max(0, Number(block.code?.slice(1) || 1) - 1); }
 function isAccessBlock(block) { return block.code === 'L2'; }
-function percent(block) { return Math.min(100, Math.round((Number(block.current_weight_tons || 0) / Number(block.max_weight_tons || 50)) * 100)); }
-function barClass(block) { return percent(block) >= 90 ? 'fill-red-500' : percent(block) >= 60 ? 'fill-safety' : block.inventories.length ? 'fill-emerald-500' : 'fill-slate-300 dark:fill-iron-700'; }
+function percent(block) { 
+  if (block.status === 'FULL') return 100;
+  
+  // 1. Calculate physical fullness via Area Geometry (Smart System)
+  if (block.max_area_m2 > 0 && block.utilized_area_m2 > 0) {
+      const areaPercent = Math.round((Number(block.utilized_area_m2) / Number(block.max_area_m2)) * 100);
+      if (areaPercent > 0) return Math.min(110, areaPercent); // cap at 110 for overcapacity visual
+  }
+  
+  // 2. Fallback to SIKUTA pieces limit if area calculation is 0
+  if (block.max_stock_pcs > 0) return Math.min(100, Math.round((Number(block.current_stock_pcs || 0) / Number(block.max_stock_pcs)) * 100));
+  
+  // 3. Last fallback to weight (mostly inaccurate)
+  return Math.min(100, Math.round((Number(block.current_weight_tons || 0) / Number(block.max_weight_tons || 50)) * 100)); 
+}
+function barClass(block) { 
+  const p = percent(block);
+  if (p > 100) return 'fill-red-600 animate-pulse'; // OVERCAPACITY
+  return p >= 90 ? 'fill-red-500' : p >= 60 ? 'fill-safety' : block.inventories.length ? 'fill-emerald-500' : 'fill-slate-300 dark:fill-iron-700'; 
+}
 function detailBlockClass(block) { return isAccessBlock(block) ? 'fill-yellow-100 stroke-yellow-600 dark:fill-yellow-950/40 dark:stroke-yellow-300' : block.inventories.length ? 'fill-emerald-50 stroke-emerald-500/70 dark:fill-emerald-950/30 dark:stroke-emerald-400/60' : 'fill-white stroke-slate-400 dark:fill-[#0d2c3c] dark:stroke-cyan-200/50'; }
 function masterBlockClass(block) { return block.inventories.length ? 'fill-emerald-200/60 stroke-emerald-600/70 dark:fill-emerald-950/40 dark:stroke-emerald-300/60' : 'fill-white stroke-slate-500/70 dark:fill-[#0b2230] dark:stroke-cyan-100/40'; }
 function masterHotspot(index) { return { x: 150, y: 130 + index * 235, width: 900, height: 235 }; }

@@ -241,6 +241,7 @@ class SyncAppSheetData extends Command
             $rack->update([
                 'current_weight_tons' => round($tonaseKg / 1000, 2),
                 'max_weight_tons' => $maxStockPc > 0 ? round(($maxStockPc * 15) / 1000, 2) : $rack->max_weight_tons,
+                'max_stock_pcs' => $maxStockPc,
                 'sloc_code' => $row['SLOC SAP'] ?? $rack->sloc_code,
                 'status' => $totalStok >= $maxStockPc && $maxStockPc > 0 ? 'FULL' : 'AVAILABLE',
                 'last_synced_at' => now(),
@@ -251,15 +252,28 @@ class SyncAppSheetData extends Command
                 $kodeMaterial = $row['Kode Material'] ?? 'UNKNOWN';
                 $product = PipeProduct::where('sap_code', $kodeMaterial)->first();
 
-                // FIX: Update existing products if they have 0 pcs_per_bundle
-                if ($product && $product->pcs_per_bundle == 0) {
-                    $ukuran = $product->nominal_size ?: ($row['Ukuran'] ?? '');
-                    $pcs = $this->getPcsPerBundle($ukuran);
-                    if ($pcs > 0) {
-                        $product->update([
-                            'pcs_per_bundle' => $pcs,
-                            'nominal_size' => $ukuran
-                        ]);
+                if ($product) {
+                    $ukuranSikuta = $row['Ukuran'] ?? '';
+                    $kelasSikuta = $row['Kelas'] ?? '';
+                    $updates = [];
+
+                    if ($product->pcs_per_bundle == 0) {
+                        $pcs = $this->getPcsPerBundle($ukuranSikuta ?: $product->nominal_size);
+                        if ($pcs > 0) {
+                            $updates['pcs_per_bundle'] = $pcs;
+                        }
+                    }
+
+                    // Always prioritize AppSheet's naming (like 4" 114,3x...) over local DB
+                    if (!empty($ukuranSikuta) && $ukuranSikuta !== $product->nominal_size) {
+                        $updates['nominal_size'] = $ukuranSikuta;
+                    }
+                    if (!empty($kelasSikuta) && $kelasSikuta !== $product->spec_name) {
+                        $updates['spec_name'] = $kelasSikuta;
+                    }
+
+                    if (!empty($updates)) {
+                        $product->update($updates);
                     }
                 }
 

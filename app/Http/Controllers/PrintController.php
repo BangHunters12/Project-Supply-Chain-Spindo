@@ -2,11 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\AllGudangExport;
 use App\Models\WarehouseZone;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PrintController extends Controller
 {
+    public function exportAllGudang()
+    {
+        return Excel::download(new AllGudangExport, 'Identitas_Pipa_Semua_Gudang.xlsx');
+    }
     public function identitasBlok(Request $request, string $code)
     {
         $gudang = WarehouseZone::where('code', $code)->with(['racks.inventories.product.category'])->firstOrFail();

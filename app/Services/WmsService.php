@@ -48,6 +48,10 @@ class WmsService
                     'area_code' => $rack->area_code,
                     'max_weight_tons' => (float) $rack->max_weight_tons,
                     'current_weight_tons' => (float) ($rack->inventories->sum('total_weight_kg') / 1000),
+                    'max_stock_pcs' => (int) $rack->max_stock_pcs,
+                    'current_stock_pcs' => (int) $rack->inventories->sum('qty_pcs'),
+                    'utilized_area_m2' => (float) $this->calculateUtilizedArea($rack),
+                    'max_area_m2' => 21.44,
                     'status' => $rack->status,
                     'inventories' => $rack->inventories->map(fn (PipeInventory $inventory) => [
                         'id' => $inventory->id,
@@ -78,5 +82,40 @@ class WmsService
     {
         $parts = explode('-', $rackCode);
         return count($parts) > 1 ? end($parts) : $rackCode;
+    }
+
+    protected function getOuterDiameterMm(?string $nominalSize): float
+    {
+        if (!$nominalSize) return 0;
+        $size = trim(str_replace('"', '', $nominalSize));
+        $map = [
+            '1/2' => 21.3,
+            '3/4' => 26.7,
+            '1' => 33.4,
+            '1-1/4' => 42.2,
+            '1-1/2' => 48.3,
+            '2' => 60.3,
+            '2-1/2' => 73.0,
+            '3' => 88.9,
+            '4' => 114.3,
+            '5' => 141.3,
+            '6' => 168.3,
+            '8' => 219.1,
+        ];
+        return $map[$size] ?? 0;
+    }
+
+    protected function calculateUtilizedArea($rack): float
+    {
+        $totalAreaM2 = 0;
+        foreach ($rack->inventories as $inv) {
+            if (!$inv->product) continue;
+            $od = $this->getOuterDiameterMm($inv->product->nominal_size);
+            if ($od > 0) {
+                $areaMm2 = pi() * pow($od / 2, 2);
+                $totalAreaM2 += ($areaMm2 * $inv->qty_pcs) / 1000000;
+            }
+        }
+        return $totalAreaM2;
     }
 }
