@@ -19,8 +19,8 @@ RUN npm run build
 # ==========================================
 # Stage 2: Production PHP & Nginx Server
 # ==========================================
-# Menggunakan base image serversideup yang sudah dioptimasi untuk Laravel + Nginx
-FROM serversideup/php:8.2-fpm-nginx
+# Menggunakan base image serversideup yang sudah dioptimasi untuk Laravel + Nginx (PHP 8.3)
+FROM serversideup/php:8.3-fpm-nginx
 
 # Environment variable untuk produksi
 ENV APP_ENV=production
@@ -29,6 +29,9 @@ ENV LOG_CHANNEL=stderr
 
 # Pindah ke user root sementara untuk setup file & permission
 USER root
+
+# Install ekstensi PHP yang dibutuhkan (GD untuk php-spreadsheet/Excel)
+RUN install-php-extensions gd
 
 # Hapus file default yang ada di /var/www/html (jika ada)
 RUN rm -rf /var/www/html/*
@@ -50,6 +53,5 @@ RUN chown -R www-data:www-data /var/www/html \
 # Kembali menggunakan user non-root untuk keamanan (www-data)
 USER www-data
 
-# (Opsional) Jika ingin otomatis menjalankan migration saat deploy di Railway,
-# hilangkan tanda pagar di bawah ini:
-# ENV AUTORUN_LARAVEL_MIGRATION=true
+# Aktifkan otomatisasi jalankan migration saat deploy di Railway
+ENV AUTORUN_LARAVEL_MIGRATION=true
