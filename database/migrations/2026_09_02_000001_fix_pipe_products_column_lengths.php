@@ -1,43 +1,46 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('pipe_products', function (Blueprint $table) {
-            // Drop old composite unique index that may cause "data too long" on MySQL
-            $table->dropUnique('uq_cat_sap_spec_thread');
-        });
+        // Use raw SQL to avoid requiring doctrine/dbal
+        // First drop the composite unique index
+        try {
+            Schema::table('pipe_products', function ($table) {
+                $table->dropUnique('uq_cat_sap_spec_thread');
+            });
+        } catch (\Exception $e) {
+            // Index might not exist
+        }
 
-        Schema::table('pipe_products', function (Blueprint $table) {
-            // Resize columns to proper lengths to fit MySQL index limits
-            $table->string('sap_code', 50)->change();
-            $table->string('nominal_size', 50)->change();
-            $table->string('spec_name', 100)->change();
-            $table->string('material_code', 50)->nullable()->change();
+        // Alter columns using raw SQL (no doctrine/dbal needed)
+        DB::statement('ALTER TABLE pipe_products MODIFY sap_code VARCHAR(100)');
+        DB::statement('ALTER TABLE pipe_products MODIFY nominal_size VARCHAR(100)');
+        DB::statement('ALTER TABLE pipe_products MODIFY spec_name VARCHAR(100)');
+        DB::statement('ALTER TABLE pipe_products MODIFY material_code VARCHAR(100) NULL');
 
-            // Re-create unique index with smaller column sizes
-            $table->unique(['pipe_category_id', 'sap_code', 'spec_name', 'is_threaded'], 'uq_cat_sap_spec_thread');
-        });
+        // Recreate the unique index with the new column sizes
+        DB::statement('ALTER TABLE pipe_products ADD UNIQUE uq_cat_sap_spec_thread (pipe_category_id, sap_code, spec_name, is_threaded)');
     }
 
     public function down(): void
     {
-        Schema::table('pipe_products', function (Blueprint $table) {
-            $table->dropUnique('uq_cat_sap_spec_thread');
-        });
+        try {
+            Schema::table('pipe_products', function ($table) {
+                $table->dropUnique('uq_cat_sap_spec_thread');
+            });
+        } catch (\Exception $e) {}
 
-        Schema::table('pipe_products', function (Blueprint $table) {
-            $table->string('sap_code', 255)->change();
-            $table->string('nominal_size', 255)->change();
-            $table->string('spec_name', 255)->change();
-            $table->string('material_code', 255)->nullable()->change();
+        DB::statement('ALTER TABLE pipe_products MODIFY sap_code VARCHAR(255)');
+        DB::statement('ALTER TABLE pipe_products MODIFY nominal_size VARCHAR(255)');
+        DB::statement('ALTER TABLE pipe_products MODIFY spec_name VARCHAR(255)');
+        DB::statement('ALTER TABLE pipe_products MODIFY material_code VARCHAR(255) NULL');
 
-            $table->unique(['pipe_category_id', 'sap_code', 'spec_name', 'is_threaded'], 'uq_cat_sap_spec_thread');
-        });
+        DB::statement('ALTER TABLE pipe_products ADD UNIQUE uq_cat_sap_spec_thread (pipe_category_id, sap_code, spec_name, is_threaded)');
     }
 };
