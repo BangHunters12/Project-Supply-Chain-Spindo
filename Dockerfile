@@ -40,7 +40,7 @@ RUN rm -rf /var/www/html/*
 COPY . /var/www/html
 
 # Install dependency PHP tanpa dependensi dev
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-req=ext-gd
 
 # Copy hasil build Vite dari Stage 1
 COPY --from=frontend /app/public/build /var/www/html/public/build

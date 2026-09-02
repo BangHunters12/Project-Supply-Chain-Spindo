@@ -167,44 +167,60 @@ class SyncAppSheetData extends Command
     protected function syncProduk(): void
     {
         $this->info('🔧 Syncing Produk...');
+
+        // Temporarily increase memory for large datasets
+        $previousMemoryLimit = ini_get('memory_limit');
+        ini_set('memory_limit', '512M');
+
         $data = $this->appSheet->fetchTable('produk');
 
         if ($data->isEmpty()) {
             $this->warn('   → Tidak ada data produk dari SIKUTA, skip.');
+            ini_set('memory_limit', $previousMemoryLimit);
             return;
         }
 
+        $this->info("   → Diterima {$data->count()} baris, memproses...");
+
         $count = 0;
-        foreach ($data as $row) {
-            $kodeProduk = $row['Kode Produk'] ?? null;
-            if (!$kodeProduk) continue;
+        // Process in chunks of 500 to reduce memory pressure
+        foreach ($data->chunk(500) as $chunkIndex => $chunk) {
+            DB::transaction(function () use ($chunk, &$count) {
+                foreach ($chunk as $row) {
+                    $kodeProduk = $row['Kode Produk'] ?? null;
+                    if (!$kodeProduk) continue;
 
-            // Determine or create category
-            $jenis = $row['Jenis'] ?? 'PIPA';
-            $categoryCode = str_contains(strtoupper($jenis), 'GALVA') ? 'PG' : 'PH';
-            $category = PipeCategory::firstOrCreate(
-                ['code' => $categoryCode],
-                ['name' => $categoryCode === 'PG' ? 'Pipa Galvanis' : 'Pipa Hitam']
-            );
+                    // Determine or create category
+                    $jenis = $row['Jenis'] ?? 'PIPA';
+                    $categoryCode = str_contains(strtoupper($jenis), 'GALVA') ? 'PG' : 'PH';
+                    $category = PipeCategory::firstOrCreate(
+                        ['code' => $categoryCode],
+                        ['name' => $categoryCode === 'PG' ? 'Pipa Galvanis' : 'Pipa Hitam']
+                    );
 
-            $ukuran = $row['Ukuran'] ?? '';
-            $pcsPerBundle = $this->getPcsPerBundle($ukuran);
+                    $ukuran = $row['Ukuran'] ?? '';
+                    $pcsPerBundle = $this->getPcsPerBundle($ukuran);
 
-            PipeProduct::updateOrCreate(
-                ['sap_code' => $kodeProduk],
-                [
-                    'pipe_category_id' => $category->id,
-                    'nominal_size' => $ukuran,
-                    'spec_name' => $row['Class'] ?? $row['Pengerjaan'] ?? '',
-                    'outer_diameter_mm' => 0,
-                    'wall_thickness_min' => 0,
-                    'wall_thickness_max' => 0,
-                    'pcs_per_bundle' => $pcsPerBundle,
-                    'length_meters' => 6.00,
-                ]
-            );
-            $count++;
+                    PipeProduct::updateOrCreate(
+                        ['sap_code' => $kodeProduk],
+                        [
+                            'pipe_category_id' => $category->id,
+                            'nominal_size' => $ukuran,
+                            'spec_name' => $row['Class'] ?? $row['Pengerjaan'] ?? '',
+                            'outer_diameter_mm' => 0,
+                            'wall_thickness_min' => 0,
+                            'wall_thickness_max' => 0,
+                            'pcs_per_bundle' => $pcsPerBundle,
+                            'length_meters' => 6.00,
+                        ]
+                    );
+                    $count++;
+                }
+            });
+            $this->info("   → Chunk " . ($chunkIndex + 1) . " selesai ({$count} produk)");
         }
+
+        ini_set('memory_limit', $previousMemoryLimit);
         $this->info("   → {$count} produk synced");
     }
 

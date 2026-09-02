@@ -75,18 +75,34 @@ class AppSheetService
         }
 
         try {
-            $response = Http::withoutVerifying()->timeout(60)->post($this->proxyUrl, [
+            // Increase memory limit for large tables
+            $previousMemoryLimit = ini_get('memory_limit');
+            ini_set('memory_limit', '512M');
+
+            $response = Http::withoutVerifying()->timeout(120)->post($this->proxyUrl, [
                 'tableName' => $tableName,
                 'action' => 'Find',
                 'filters' => [],
             ]);
 
             if ($response->successful()) {
-                $data = $response->json();
+                // Decode body directly to avoid double memory usage
+                $body = $response->body();
+                $data = json_decode($body, true);
+                unset($body); // Free memory immediately
+
+                if (!is_array($data)) {
+                    Log::warning("[AppSheet] Invalid JSON response for {$tableName}");
+                    ini_set('memory_limit', $previousMemoryLimit);
+                    return $this->getDemoData($tableKey);
+                }
+
                 Log::info("[AppSheet] Fetched " . count($data) . " rows from: {$tableName}");
+                ini_set('memory_limit', $previousMemoryLimit);
                 return collect($data);
             }
 
+            ini_set('memory_limit', $previousMemoryLimit);
             Log::warning("[AppSheet] Failed to fetch {$tableName}: " . $response->status());
             return $this->getDemoData($tableKey);
         } catch (\Exception $e) {

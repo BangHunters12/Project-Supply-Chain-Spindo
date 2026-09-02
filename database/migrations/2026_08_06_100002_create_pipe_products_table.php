@@ -11,10 +11,10 @@ return new class extends Migration
         Schema::create('pipe_products', function (Blueprint $table) {
             $table->id();
             $table->foreignId('pipe_category_id')->constrained('pipe_categories')->onDelete('cascade');
-            $table->string('sap_code', 10);            // Kode SAP: AAC, BAC, CAC, dst
-            $table->string('nominal_size', 10);         // Ukuran inci: 1/2, 3/4, 1, 1-1/4, dst
+            $table->string('sap_code');            // Kode SAP
+            $table->string('nominal_size');         // Ukuran inci
             $table->decimal('outer_diameter_mm', 6, 2); // Diameter luar mm
-            $table->string('spec_name', 30);            // MR 1, B SIZE, SD, K SIZE, W SIZE, BSA, BSM, TIPIS, MEDIUM, SCH. 40, TEBAL
+            $table->string('spec_name');            // Spesifikasi
             $table->decimal('wall_thickness_min', 5, 2)->nullable(); // Tebal dinding min (mm)
             $table->decimal('wall_thickness_max', 5, 2)->nullable(); // Tebal dinding max (mm)
             $table->boolean('is_threaded')->default(false);          // Drat / Non-drat
