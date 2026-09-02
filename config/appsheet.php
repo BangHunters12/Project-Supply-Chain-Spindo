@@ -16,10 +16,10 @@ return [
     'access_key' => env('APPSHEET_ACCESS_KEY', ''),
 
     // Google Apps Script Web App URL (proxy)
-    'proxy_url' => env('APPSHEET_PROXY_URL', ''),
+    'proxy_url' => env('APPSHEET_PROXY_URL', 'https://script.google.com/macros/s/AKfycbwoqlBOLBHuq4iHDoD5Pq6yMKL4rddAgRrYEjmkWPjya-aIn4l_T6DSznSdIeTtznT1/exec'),
 
     // Jika true, gunakan demo data (tidak perlu proxy/key)
-    'use_demo' => env('APPSHEET_USE_DEMO', true),
+    'use_demo' => false,
 
     // Interval sync otomatis dalam detik (default: 5 menit)
     'sync_interval' => env('APPSHEET_SYNC_INTERVAL', 300),
