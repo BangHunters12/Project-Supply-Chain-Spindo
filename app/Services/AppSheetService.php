@@ -85,11 +85,26 @@ class AppSheetService
             $previousMemoryLimit = ini_get('memory_limit');
             ini_set('memory_limit', '512M');
 
-            $response = Http::withoutVerifying()->timeout(120)->post($this->proxyUrl, [
-                'tableName' => $tableName,
-                'action' => 'Find',
-                'filters' => [],
-            ]);
+            Log::info("[AppSheet] Requesting table: {$tableName} from: {$this->proxyUrl}");
+
+            $response = Http::withoutVerifying()
+                ->timeout(180)
+                ->asJson()
+                ->acceptJson()
+                ->withOptions([
+                    'allow_redirects' => [
+                        'max' => 5,
+                        'strict' => true,  // Preserve POST on redirect
+                        'protocols' => ['http', 'https'],
+                    ],
+                ])
+                ->post($this->proxyUrl, [
+                    'tableName' => $tableName,
+                    'action' => 'Find',
+                    'filters' => [],
+                ]);
+
+            Log::info("[AppSheet] Response status: {$response->status()}, body length: " . strlen($response->body()));
 
             if ($response->successful()) {
                 // Decode body directly to avoid double memory usage
@@ -98,18 +113,24 @@ class AppSheetService
                 unset($body); // Free memory immediately
 
                 if (!is_array($data)) {
-                    Log::warning("[AppSheet] Invalid JSON response for {$tableName}");
+                    Log::warning("[AppSheet] Invalid JSON response for {$tableName}, raw preview: " . substr($response->body(), 0, 200));
                     ini_set('memory_limit', $previousMemoryLimit);
                     return collect([]);
                 }
 
                 Log::info("[AppSheet] Fetched " . count($data) . " rows from: {$tableName}");
+                
+                // Debug: log first row keys to verify data structure
+                if (count($data) > 0) {
+                    Log::info("[AppSheet] First row keys: " . implode(', ', array_keys($data[0] ?? [])));
+                }
+
                 ini_set('memory_limit', $previousMemoryLimit);
                 return collect($data);
             }
 
             ini_set('memory_limit', $previousMemoryLimit);
-            Log::warning("[AppSheet] Failed to fetch {$tableName}: " . $response->status());
+            Log::warning("[AppSheet] Failed to fetch {$tableName}: HTTP " . $response->status() . " - Body: " . substr($response->body(), 0, 300));
             return collect([]);
         } catch (\Exception $e) {
             Log::error("[AppSheet] Error fetching {$tableName}: " . $e->getMessage());
