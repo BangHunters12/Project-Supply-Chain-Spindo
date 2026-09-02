@@ -236,12 +236,27 @@ class SyncAppSheetData extends Command
         $zones = WarehouseZone::all()->keyBy(fn($z) => $z->name);
 
         foreach ($data as $row) {
-            $gudangName = $row['Gudang'] ?? null;
-            $blokName = $row['Blok'] ?? null;
+            $gudangName = strtoupper(trim($row['Gudang'] ?? ''));
+            $blokName = trim($row['Blok'] ?? '');
             if (!$gudangName || !$blokName) continue;
 
-            // Find the zone
-            $zone = $zones->first(fn($z) => str_contains($z->name, $gudangName));
+            // Map A -> GUDANG-1, B -> GUDANG-2, etc.
+            $mapGudang = [
+                'A' => 'GUDANG-1',
+                'B' => 'GUDANG-2',
+                'C' => 'GUDANG-3',
+                'D' => 'GUDANG-4',
+                'GUDANG 1' => 'GUDANG-1',
+                'GUDANG 2' => 'GUDANG-2',
+                'GUDANG 3' => 'GUDANG-3',
+                'GUDANG 4' => 'GUDANG-4',
+            ];
+            
+            $zoneCode = $mapGudang[$gudangName] ?? null;
+            if (!$zoneCode) continue;
+
+            // Find the zone by code instead of str_contains name
+            $zone = $zones->first(fn($z) => $z->code === $zoneCode);
             if (!$zone) continue;
 
             // Find the rack
