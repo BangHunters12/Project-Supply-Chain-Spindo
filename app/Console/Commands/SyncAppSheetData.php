@@ -53,16 +53,36 @@ class SyncAppSheetData extends Command
 
         try {
             if (in_array($table, ['all', 'gudang'])) {
-                $this->syncGudang();
+                try {
+                    $this->syncGudang();
+                } catch (\Exception $e) {
+                    $this->error("   ⚠️ Gudang sync error: " . $e->getMessage());
+                    Log::error('[SIKUTA Sync] Gudang: ' . $e->getMessage());
+                }
             }
             if (in_array($table, ['all', 'blok'])) {
-                $this->syncBlok();
+                try {
+                    $this->syncBlok();
+                } catch (\Exception $e) {
+                    $this->error("   ⚠️ Blok sync error: " . $e->getMessage());
+                    Log::error('[SIKUTA Sync] Blok: ' . $e->getMessage());
+                }
             }
             if (in_array($table, ['all', 'produk'])) {
-                $this->syncProduk();
+                try {
+                    $this->syncProduk();
+                } catch (\Exception $e) {
+                    $this->error("   ⚠️ Produk sync error: " . $e->getMessage());
+                    Log::error('[SIKUTA Sync] Produk: ' . $e->getMessage());
+                }
             }
             if (in_array($table, ['all', 'stok'])) {
-                $this->syncStatusStok();
+                try {
+                    $this->syncStatusStok();
+                } catch (\Exception $e) {
+                    $this->error("   ⚠️ Stok sync error: " . $e->getMessage());
+                    Log::error('[SIKUTA Sync] Stok: ' . $e->getMessage());
+                }
             }
 
 
