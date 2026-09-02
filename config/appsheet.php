@@ -16,25 +16,25 @@ return [
     'access_key' => env('APPSHEET_ACCESS_KEY', ''),
 
     // Google Apps Script Web App URL (proxy)
-    'proxy_url' => env('APPSHEET_PROXY_URL', 'https://script.google.com/macros/s/AKfycbwoqlBOLBHuq4iHDoD5Pq6yMKL4rddAgRrYEjmkWPjya-aIn4l_T6DSznSdIeTtznT1/exec'),
+    'proxy_url' => env('APPSHEET_PROXY_URL', ''),
 
     // Jika true, gunakan demo data (tidak perlu proxy/key)
-    'use_demo' => false,
+    'use_demo' => env('APPSHEET_USE_DEMO', true),
 
     // Interval sync otomatis dalam detik (default: 5 menit)
     'sync_interval' => env('APPSHEET_SYNC_INTERVAL', 300),
 
     // Nama tabel di AppSheet SIKUTA
     'tables' => [
-        'blok'          => 'DATA Blok',
-        'customer'      => 'DATA Customer',
-        'gudang'        => 'DATA Gudang',
-        'operator'      => 'DATA Operator',
-        'produk'        => 'DATA Produk',
-        'status_stok'   => 'Rekap Status Stok',
-        'muatan'        => 'Rekap Muatan',
-        'opname'        => 'Rekap Opname',
-        'gudangblok'    => 'HELPER Gudangblok II',
-        'pindahblok'    => 'HELPER Pindahblok',
+        'blok' => 'DATA Blok',
+        'customer' => 'DATA Customer',
+        'gudang' => 'DATA Gudang',
+        'operator' => 'DATA Operator',
+        'produk' => 'DATA Produk',
+        'status_stok' => 'Rekap Status Stok',
+        'muatan' => 'Rekap Muatan',
+        'opname' => 'Rekap Opname',
+        'gudangblok' => 'HELPER Gudangblok II',
+        'pindahblok' => 'HELPER Pindahblok',
     ],
 ];

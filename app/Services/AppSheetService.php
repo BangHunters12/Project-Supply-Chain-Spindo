@@ -18,8 +18,14 @@ class AppSheetService
     {
         $this->appId = config('appsheet.app_id');
         $this->accessKey = config('appsheet.access_key');
-        $this->proxyUrl = config('appsheet.proxy_url');
-        $this->useDemo = false; // Memaksa agar SELALU LIVE, menghapus mode demo
+        
+        // Hardcode URL langsung — env variable di Railway bisa kosong dan override default
+        $configUrl = config('appsheet.proxy_url');
+        $this->proxyUrl = !empty($configUrl)
+            ? $configUrl
+            : 'https://script.google.com/macros/s/AKfycbwoqlBOLBHuq4iHDoD5Pq6yMKL4rddAgRrYEjmkWPjya-aIn4l_T6DSznSdIeTtznT1/exec';
+        
+        $this->useDemo = false;
     }
 
     /**
