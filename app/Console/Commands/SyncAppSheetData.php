@@ -310,8 +310,9 @@ class SyncAppSheetData extends Command
             ]);
 
             // Create or update inventory record for this block
+            $kodeMaterial = $row['Kode Material'] ?? 'UNKNOWN';
+            
             if ($totalStok > 0) {
-                $kodeMaterial = $row['Kode Material'] ?? 'UNKNOWN';
                 $product = PipeProduct::where('sap_code', $kodeMaterial)->first();
 
                 if ($product) {
@@ -326,7 +327,6 @@ class SyncAppSheetData extends Command
                         }
                     }
 
-                    // Always prioritize AppSheet's naming (like 4" 114,3x...) over local DB
                     if (!empty($ukuranSikuta) && $ukuranSikuta !== $product->nominal_size) {
                         $updates['nominal_size'] = $ukuranSikuta;
                     }
@@ -364,13 +364,13 @@ class SyncAppSheetData extends Command
                     ]);
                 }
 
-                // Hitung jumlah bundle (hanya hitung bundle utuh)
+                // Hitung jumlah bundle
                 $qtyBundles = 0;
                 if ($product->pcs_per_bundle > 0) {
                     $qtyBundles = (int) floor($totalStok / $product->pcs_per_bundle);
                 }
 
-                // Upsert inventory — use composite key of rack + product
+                // Upsert inventory
                 $bundleTag = 'SIKUTA-' . $rackCode . '-' . $kodeMaterial;
 
                 PipeInventory::updateOrCreate(
@@ -391,6 +391,10 @@ class SyncAppSheetData extends Command
                         'hari_penyimpanan' => intval($row['Hari Penyimpanan'] ?? 0),
                     ]
                 );
+            } else {
+                // Stok = 0 di SIKUTA → hapus inventory record lama supaya tidak muncul di WMS
+                $bundleTag = 'SIKUTA-' . $rackCode . '-' . $kodeMaterial;
+                PipeInventory::where('bundle_tag', $bundleTag)->delete();
             }
             $count++;
         }
