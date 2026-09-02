@@ -2,45 +2,34 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        // Use raw SQL to avoid requiring doctrine/dbal
-        // First drop the composite unique index
+        // Drop unique index first using raw SQL (handles if exists)
         try {
-            Schema::table('pipe_products', function ($table) {
-                $table->dropUnique('uq_cat_sap_spec_thread');
-            });
+            DB::statement('ALTER TABLE pipe_products DROP INDEX uq_cat_sap_spec_thread');
         } catch (\Exception $e) {
-            // Index might not exist
+            // Index doesn't exist, that's fine
         }
 
-        // Alter columns using raw SQL (no doctrine/dbal needed)
-        DB::statement('ALTER TABLE pipe_products MODIFY sap_code VARCHAR(100)');
-        DB::statement('ALTER TABLE pipe_products MODIFY nominal_size VARCHAR(100)');
-        DB::statement('ALTER TABLE pipe_products MODIFY spec_name VARCHAR(100)');
+        // Alter columns using raw SQL
+        DB::statement('ALTER TABLE pipe_products MODIFY sap_code VARCHAR(100) NOT NULL');
+        DB::statement('ALTER TABLE pipe_products MODIFY nominal_size VARCHAR(100) NOT NULL');
+        DB::statement('ALTER TABLE pipe_products MODIFY spec_name VARCHAR(100) NOT NULL');
         DB::statement('ALTER TABLE pipe_products MODIFY material_code VARCHAR(100) NULL');
 
-        // Recreate the unique index with the new column sizes
-        DB::statement('ALTER TABLE pipe_products ADD UNIQUE uq_cat_sap_spec_thread (pipe_category_id, sap_code, spec_name, is_threaded)');
+        // Recreate unique index
+        try {
+            DB::statement('CREATE UNIQUE INDEX uq_cat_sap_spec_thread ON pipe_products (pipe_category_id, sap_code, spec_name, is_threaded)');
+        } catch (\Exception $e) {
+            // Index already exists, skip
+        }
     }
 
     public function down(): void
     {
-        try {
-            Schema::table('pipe_products', function ($table) {
-                $table->dropUnique('uq_cat_sap_spec_thread');
-            });
-        } catch (\Exception $e) {}
-
-        DB::statement('ALTER TABLE pipe_products MODIFY sap_code VARCHAR(255)');
-        DB::statement('ALTER TABLE pipe_products MODIFY nominal_size VARCHAR(255)');
-        DB::statement('ALTER TABLE pipe_products MODIFY spec_name VARCHAR(255)');
-        DB::statement('ALTER TABLE pipe_products MODIFY material_code VARCHAR(255) NULL');
-
-        DB::statement('ALTER TABLE pipe_products ADD UNIQUE uq_cat_sap_spec_thread (pipe_category_id, sap_code, spec_name, is_threaded)');
+        // No-op, column sizes are fine either way
     }
 };
