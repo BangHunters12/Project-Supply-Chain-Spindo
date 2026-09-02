@@ -103,20 +103,32 @@ class SyncAppSheetData extends Command
         $this->info('📦 Syncing Gudang...');
         $data = $this->appSheet->fetchTable('gudang');
 
+        // Mapping SIKUTA gudang letters to WMS numbers
+        $gudangMap = ['A' => 1, 'B' => 2, 'C' => 3, 'D' => 4];
+
         $count = 0;
         foreach ($data as $row) {
-            $gudangName = $row['Gudang'] ?? null;
-            if (!$gudangName) continue;
+            $gudangRaw = trim($row['Gudang'] ?? '');
+            if (!$gudangRaw) continue;
 
-            // Extract number: "Gudang 1" → 1
-            preg_match('/(\d+)/', $gudangName, $matches);
-            $num = $matches[1] ?? ($count + 1);
+            // Determine the gudang number
+            $num = null;
+            $upper = strtoupper($gudangRaw);
+            if (isset($gudangMap[$upper])) {
+                // SIKUTA format: "A", "B", "C", "D"
+                $num = $gudangMap[$upper];
+            } elseif (preg_match('/(\d+)/', $gudangRaw, $matches)) {
+                // Fallback: "Gudang 1", "Gudang 2", etc.
+                $num = (int) $matches[1];
+            }
+            if (!$num) continue;
+
             $code = 'GUDANG-' . $num;
 
             WarehouseZone::updateOrCreate(
                 ['code' => $code],
                 [
-                    'name' => $gudangName . ' / Warehouse ' . $num,
+                    'name' => 'Gudang ' . $num,
                     'category' => 'Area Pipa',
                     'total_capacity_tons' => 1200,
                 ]
@@ -140,7 +152,8 @@ class SyncAppSheetData extends Command
         foreach ($zones as $code => $zone) {
             foreach ($data as $row) {
                 $blokName = $row['Blok'] ?? null;
-                if (!$blokName) continue;
+                if (!$blokName)
+                    continue;
 
                 $rackCode = str_replace('GUDANG-', 'G', $code) . '-' . $blokName;
 
@@ -188,7 +201,8 @@ class SyncAppSheetData extends Command
             DB::transaction(function () use ($chunk, &$count) {
                 foreach ($chunk as $row) {
                     $kodeProduk = $row['Kode Produk'] ?? null;
-                    if (!$kodeProduk) continue;
+                    if (!$kodeProduk)
+                        continue;
 
                     // Determine or create category
                     $jenis = $row['Jenis'] ?? 'PIPA';
@@ -233,36 +247,33 @@ class SyncAppSheetData extends Command
         $data = $this->appSheet->fetchTable('status_stok');
 
         $count = 0;
-        $zones = WarehouseZone::all()->keyBy(fn($z) => $z->name);
+        $zones = WarehouseZone::all()->keyBy(fn($z) => $z->code);
+
+        // Mapping SIKUTA gudang letters to WMS zone codes
+        $gudangMap = [
+            'A' => 'GUDANG-1', 'B' => 'GUDANG-2',
+            'C' => 'GUDANG-3', 'D' => 'GUDANG-4',
+            'GUDANG 1' => 'GUDANG-1', 'GUDANG 2' => 'GUDANG-2',
+            'GUDANG 3' => 'GUDANG-3', 'GUDANG 4' => 'GUDANG-4',
+        ];
 
         foreach ($data as $row) {
-            $gudangName = strtoupper(trim($row['Gudang'] ?? ''));
+            $gudangRaw = strtoupper(trim($row['Gudang'] ?? ''));
             $blokName = trim($row['Blok'] ?? '');
-            if (!$gudangName || !$blokName) continue;
+            if (!$gudangRaw || !$blokName) continue;
 
-            // Map A -> GUDANG-1, B -> GUDANG-2, etc.
-            $mapGudang = [
-                'A' => 'GUDANG-1',
-                'B' => 'GUDANG-2',
-                'C' => 'GUDANG-3',
-                'D' => 'GUDANG-4',
-                'GUDANG 1' => 'GUDANG-1',
-                'GUDANG 2' => 'GUDANG-2',
-                'GUDANG 3' => 'GUDANG-3',
-                'GUDANG 4' => 'GUDANG-4',
-            ];
-            
-            $zoneCode = $mapGudang[$gudangName] ?? null;
+            // Map gudang letter to zone code
+            $zoneCode = $gudangMap[$gudangRaw] ?? null;
             if (!$zoneCode) continue;
 
-            // Find the zone by code instead of str_contains name
-            $zone = $zones->first(fn($z) => $z->code === $zoneCode);
+            $zone = $zones->get($zoneCode);
             if (!$zone) continue;
 
             // Find the rack
             $rackCode = str_replace('GUDANG-', 'G', $zone->code) . '-' . $blokName;
             $rack = WarehouseRack::where('rack_code', $rackCode)->first();
-            if (!$rack) continue;
+            if (!$rack)
+                continue;
 
             // Update rack weight from SIKUTA data
             $tonaseKg = floatval($row['TONASE (KG)'] ?? 0);
@@ -410,7 +421,7 @@ class SyncAppSheetData extends Command
         // Ekstrak ukuran inci dari string (misal: "2" SCH-40" -> "2", "1-1/2" LGH" -> "1-1/2")
         // Hapus kutip ganda dan ambil kata pertama
         $cleanUkuran = trim(str_replace('"', '', explode(' ', $ukuran)[0]));
-        
+
         return $bundleMap[$cleanUkuran] ?? 0;
     }
 }
