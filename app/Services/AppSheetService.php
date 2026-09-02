@@ -19,7 +19,7 @@ class AppSheetService
         $this->appId = config('appsheet.app_id');
         $this->accessKey = config('appsheet.access_key');
         $this->proxyUrl = config('appsheet.proxy_url');
-        $this->useDemo = config('appsheet.use_demo', true);
+        $this->useDemo = false; // Memaksa agar SELALU LIVE, menghapus mode demo
     }
 
     /**
@@ -70,8 +70,8 @@ class AppSheetService
         $tableName = config("appsheet.tables.{$tableKey}", $tableKey);
 
         if ($this->useDemo) {
-            Log::info("[AppSheet] Demo mode — returning cached/demo data for: {$tableName}");
-            return $this->getDemoData($tableKey);
+            Log::info("[AppSheet] Demo mode — returning empty collection for: {$tableName}");
+            return collect([]);
         }
 
         try {
@@ -94,7 +94,7 @@ class AppSheetService
                 if (!is_array($data)) {
                     Log::warning("[AppSheet] Invalid JSON response for {$tableName}");
                     ini_set('memory_limit', $previousMemoryLimit);
-                    return $this->getDemoData($tableKey);
+                    return collect([]);
                 }
 
                 Log::info("[AppSheet] Fetched " . count($data) . " rows from: {$tableName}");
@@ -104,10 +104,10 @@ class AppSheetService
 
             ini_set('memory_limit', $previousMemoryLimit);
             Log::warning("[AppSheet] Failed to fetch {$tableName}: " . $response->status());
-            return $this->getDemoData($tableKey);
+            return collect([]);
         } catch (\Exception $e) {
             Log::error("[AppSheet] Error fetching {$tableName}: " . $e->getMessage());
-            return $this->getDemoData($tableKey);
+            return collect([]);
         }
     }
 
