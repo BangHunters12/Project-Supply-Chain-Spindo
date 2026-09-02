@@ -85,53 +85,55 @@ class AppSheetService
             $previousMemoryLimit = ini_get('memory_limit');
             ini_set('memory_limit', '512M');
 
-            Log::info("[AppSheet] Requesting table: {$tableName} from: {$this->proxyUrl}");
+            Log::info("[AppSheet] Requesting table: {$tableName} from proxy");
 
-            $response = Http::withoutVerifying()
-                ->timeout(180)
-                ->asJson()
-                ->acceptJson()
-                ->withOptions([
-                    'allow_redirects' => [
-                        'max' => 5,
-                        'strict' => true,  // Preserve POST on redirect
-                        'protocols' => ['http', 'https'],
-                    ],
-                ])
-                ->post($this->proxyUrl, [
-                    'tableName' => $tableName,
-                    'action' => 'Find',
-                    'filters' => [],
-                ]);
+            // Use file_get_contents instead of Guzzle — Google Apps Script
+            // redirects POST→GET which breaks Guzzle's handling.
+            // file_get_contents follows redirects natively and works correctly.
+            $postData = json_encode([
+                'tableName' => $tableName,
+                'action' => 'Find',
+                'filters' => [],
+            ]);
 
-            Log::info("[AppSheet] Response status: {$response->status()}, body length: " . strlen($response->body()));
+            $context = stream_context_create([
+                'http' => [
+                    'header'  => "Content-Type: application/json\r\n",
+                    'method'  => 'POST',
+                    'content' => $postData,
+                    'timeout' => 180,
+                    'follow_location' => true,
+                    'max_redirects' => 5,
+                ],
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                ],
+            ]);
 
-            if ($response->successful()) {
-                // Decode body directly to avoid double memory usage
-                $body = $response->body();
-                $data = json_decode($body, true);
-                unset($body); // Free memory immediately
+            $body = @file_get_contents($this->proxyUrl, false, $context);
 
-                if (!is_array($data)) {
-                    Log::warning("[AppSheet] Invalid JSON response for {$tableName}, raw preview: " . substr($response->body(), 0, 200));
-                    ini_set('memory_limit', $previousMemoryLimit);
-                    return collect([]);
-                }
-
-                Log::info("[AppSheet] Fetched " . count($data) . " rows from: {$tableName}");
-                
-                // Debug: log first row keys to verify data structure
-                if (count($data) > 0) {
-                    Log::info("[AppSheet] First row keys: " . implode(', ', array_keys($data[0] ?? [])));
-                }
-
+            if ($body === false) {
+                Log::warning("[AppSheet] Failed to fetch {$tableName}: file_get_contents returned false");
                 ini_set('memory_limit', $previousMemoryLimit);
-                return collect($data);
+                return collect([]);
             }
 
+            Log::info("[AppSheet] Response body length: " . strlen($body) . " bytes");
+
+            $data = json_decode($body, true);
+            unset($body); // Free memory
+
+            if (!is_array($data)) {
+                Log::warning("[AppSheet] Invalid JSON response for {$tableName}");
+                ini_set('memory_limit', $previousMemoryLimit);
+                return collect([]);
+            }
+
+            Log::info("[AppSheet] Fetched " . count($data) . " rows from: {$tableName}");
+
             ini_set('memory_limit', $previousMemoryLimit);
-            Log::warning("[AppSheet] Failed to fetch {$tableName}: HTTP " . $response->status() . " - Body: " . substr($response->body(), 0, 300));
-            return collect([]);
+            return collect($data);
         } catch (\Exception $e) {
             Log::error("[AppSheet] Error fetching {$tableName}: " . $e->getMessage());
             return collect([]);
