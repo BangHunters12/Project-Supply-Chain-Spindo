@@ -82,14 +82,17 @@ async function loadSyncStatus() {
 
 async function handleSyncSikuta() {
   syncing.value = true;
-  showToast('Sinkronisasi SIKUTA dimulai...');
+  showToast('⏳ Sinkronisasi SIKUTA dimulai... mohon tunggu.');
   try {
     const res = await fetch('/api/wms/sync', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ table: 'all' }) });
     const json = await res.json();
     if (res.ok && json.status === 'success') {
-      showToast('✅ Data SIKUTA berhasil disinkronkan!');
+      const count = json.data?.stok_count || 0;
+      showToast(`✅ ${json.message}`);
       await loadMapData();
       await loadSyncStatus();
+    } else if (json.status === 'warning') {
+      showToast(`⚠️ ${json.message}`);
     } else {
       showToast('⚠️ ' + (json.message || 'Gagal sync'));
     }
