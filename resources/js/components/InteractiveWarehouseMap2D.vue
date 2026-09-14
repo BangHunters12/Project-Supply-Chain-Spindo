@@ -359,29 +359,34 @@
             <div
               v-for="bdl in selectedBlockInventories"
               :key="bdl.id"
-              class="p-3 rounded bg-iron-900 border border-iron-800 flex items-center justify-between text-xs font-mono"
+              @click="selectedInventoryDetail = bdl"
+              class="p-3 rounded bg-iron-900 border border-iron-800 flex items-center justify-between text-xs font-mono cursor-pointer hover:border-steel-blue-light/70 hover:bg-iron-850 transition group"
+              title="Klik untuk melihat detail lengkap pipa ini"
             >
-              <div class="space-y-0.5">
-                <div class="font-bold text-steel-blue-light flex items-center space-x-2">
-                  <span>{{ bdl.bundle_tag }}</span>
-                  <span class="text-[9px] px-1.5 py-0.2 rounded bg-iron-800 text-iron-300 font-normal">
-                    {{ bdl.product?.category?.code }}
+              <div class="space-y-1 min-w-0 flex-1 pr-3">
+                <div class="text-xs font-bold text-white group-hover:text-steel-blue-light transition-colors flex items-center gap-2 flex-wrap">
+                  <span>{{ pipeEasyName(bdl) }}</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-iron-800 text-iron-300 font-normal">
+                    {{ bdl.product?.category?.code || bdl.product?.category }}
                   </span>
                 </div>
-                <div class="text-[11px] text-iron-200 font-sans font-semibold">
-                  {{ bdl.product?.sap_code }} &middot; {{ bdl.product?.nominal_size }}" {{ bdl.product?.spec_name }}
+                <div class="text-[11px] text-cyan-400 font-mono font-semibold">
+                  {{ pipeDescription(bdl) }}
                 </div>
                 <div class="text-[10px] text-iron-400">
                   Heat: {{ bdl.heat_number }} &middot; {{ bdl.qty_pcs }} Pcs ({{ bdl.qty_bundles }} Bendel)
                 </div>
               </div>
 
-              <div class="text-right space-y-1">
+              <div class="text-right space-y-1 shrink-0">
                 <div class="font-bold text-iron-100">{{ (bdl.total_weight_kg / 1000).toFixed(2) }} Ton</div>
                 <div class="flex items-center justify-end space-x-1">
                   <span class="w-2 h-2 rounded-full" :class="bdl.qc_status === 'PASSED' ? 'bg-emerald-500' : 'bg-amber-500'"></span>
                   <span class="text-[10px] text-iron-400 uppercase">{{ bdl.qc_status }}</span>
                 </div>
+                <span class="text-[9px] text-iron-500 group-hover:text-steel-blue-light transition-colors block">
+                  Detail &rarr;
+                </span>
               </div>
             </div>
 
@@ -423,6 +428,194 @@
       </div>
     </div>
 
+    <!-- Pipe Inventory Detail Modal in 2D Interactive Map -->
+    <div
+      v-if="selectedInventoryDetail"
+      class="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      @click.self="selectedInventoryDetail = null"
+    >
+      <div class="relative w-full max-w-lg rounded-2xl border border-iron-700 bg-iron-900 p-5 sm:p-6 shadow-2xl max-h-[92vh] overflow-y-auto space-y-4 text-iron-100">
+        <!-- Header Modal -->
+        <div class="flex items-start justify-between gap-3 border-b border-iron-800 pb-3">
+          <div>
+            <span class="inline-block font-mono text-[10px] font-black uppercase tracking-wider text-steel-blue-light">
+              SIKUTA &middot; DETAIL RINCIAN PIPA
+            </span>
+            <h3 class="mt-1 text-base sm:text-lg font-black text-white leading-tight">
+              {{ pipeEasyName(selectedInventoryDetail) }}
+            </h3>
+          </div>
+          <button
+            type="button"
+            @click="selectedInventoryDetail = null"
+            class="rounded-lg border border-iron-700 p-1.5 text-iron-400 hover:bg-iron-800 hover:text-white transition-colors"
+            title="Tutup (Esc)"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Deskripsi Asli SIKUTA Card -->
+        <div class="rounded-xl border border-iron-800 bg-iron-950/80 p-3.5">
+          <div class="flex items-center justify-between text-[10px] font-mono text-iron-400 mb-1">
+            <span>DESKRIPSI SIKUTA</span>
+            <span class="font-bold text-steel-blue-light">{{ selectedInventoryDetail.product?.sap_code || '-' }}</span>
+          </div>
+          <p class="font-mono text-sm font-bold text-cyan-300 break-words leading-relaxed">
+            {{ pipeDescription(selectedInventoryDetail) }}
+          </p>
+        </div>
+
+        <!-- Badges / Status Bar -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span
+            class="rounded-md px-2.5 py-1 text-[11px] font-bold font-mono border"
+            :class="selectedInventoryDetail.product?.category_code === 'PG' || (selectedInventoryDetail.product?.category || '').includes('Galva') ? 'bg-amber-950/60 text-amber-300 border-amber-800' : 'bg-iron-800 text-iron-300 border-iron-700'"
+          >
+            {{ selectedInventoryDetail.product?.category || 'Pipa Hitam' }}
+          </span>
+          <span
+            class="rounded-md px-2.5 py-1 text-[11px] font-bold font-mono border"
+            :class="isPipeDrat(selectedInventoryDetail) ? 'bg-indigo-950/60 text-indigo-300 border-indigo-800' : 'bg-emerald-950/60 text-emerald-300 border-emerald-800'"
+          >
+            {{ isPipeDrat(selectedInventoryDetail) ? 'DRAT (Threaded)' : 'PLAIN-END (Tanpa Drat)' }}
+          </span>
+          <span
+            class="rounded-md px-2.5 py-1 text-[11px] font-bold font-mono border"
+            :class="selectedInventoryDetail.qc_status === 'PASSED' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' : 'bg-rose-950/60 text-rose-300 border-rose-800'"
+          >
+            QC: {{ selectedInventoryDetail.qc_status }}
+          </span>
+          <span class="rounded-md px-2.5 py-1 text-[11px] font-bold font-mono bg-blue-950/60 text-blue-300 border border-blue-800">
+            {{ selectedInventoryDetail.status || 'AVAILABLE' }}
+          </span>
+        </div>
+
+        <!-- Spesifikasi Teknis Grid -->
+        <div class="space-y-2">
+          <h4 class="text-xs font-black uppercase tracking-wider text-iron-400">
+            Spesifikasi Produk & Material
+          </h4>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="rounded-lg border border-iron-800 bg-iron-950/40 p-2.5">
+              <span class="block text-[10px] text-iron-500">Kode SAP / Material</span>
+              <div class="mt-0.5 flex items-center justify-between">
+                <strong class="font-mono text-xs text-iron-200">{{ selectedInventoryDetail.product?.sap_code || '-' }}</strong>
+                <button
+                  v-if="selectedInventoryDetail.product?.sap_code"
+                  type="button"
+                  @click="copySapCode(selectedInventoryDetail.product.sap_code)"
+                  class="text-[10px] font-bold text-steel-blue-light hover:underline ml-1"
+                >
+                  {{ copiedCode ? 'Tersalin!' : 'Salin' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="rounded-lg border border-iron-800 bg-iron-950/40 p-2.5">
+              <span class="block text-[10px] text-iron-500">Ukuran Nominal</span>
+              <strong class="mt-0.5 block font-mono text-xs text-iron-200">
+                {{ selectedInventoryDetail.product?.nominal_size || '-' }}
+              </strong>
+            </div>
+
+            <div class="rounded-lg border border-iron-800 bg-iron-950/40 p-2.5">
+              <span class="block text-[10px] text-iron-500">Class / Spesifikasi</span>
+              <strong class="mt-0.5 block font-mono text-xs text-iron-200">
+                {{ selectedInventoryDetail.product?.spec_name || '-' }}
+              </strong>
+            </div>
+
+            <div class="rounded-lg border border-iron-800 bg-iron-950/40 p-2.5">
+              <span class="block text-[10px] text-iron-500">Panjang Batang</span>
+              <strong class="mt-0.5 block font-mono text-xs text-iron-200">
+                {{ selectedInventoryDetail.product?.length_meters || 6.00 }} Meter
+              </strong>
+            </div>
+
+            <div class="rounded-lg border border-iron-800 bg-iron-950/40 p-2.5">
+              <span class="block text-[10px] text-iron-500">Isi Standar per Bundle</span>
+              <strong class="mt-0.5 block font-mono text-xs text-iron-200">
+                {{ selectedInventoryDetail.product?.pcs_per_bundle || 0 }} Pcs / Bdl
+              </strong>
+            </div>
+
+            <div class="rounded-lg border border-iron-800 bg-iron-950/40 p-2.5">
+              <span class="block text-[10px] text-iron-500">Pabrik Asal / Mill</span>
+              <strong class="mt-0.5 block font-mono text-xs text-iron-200 truncate" :title="selectedInventoryDetail.mill_source">
+                {{ selectedInventoryDetail.mill_source || 'Unit 7 Gresik' }}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Posisi & Volume Stok Grid -->
+        <div class="space-y-2">
+          <h4 class="text-xs font-black uppercase tracking-wider text-iron-400">
+            Posisi & Volume Stok
+          </h4>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="rounded-lg border border-iron-800 bg-iron-950/40 p-2.5">
+              <span class="block text-[10px] text-iron-500">Lokasi Blok & Gudang</span>
+              <strong class="mt-0.5 block font-mono text-xs text-cyan-300">
+                Blok {{ selectedBlockId }} &middot; {{ currentWarehouseName }}
+              </strong>
+            </div>
+
+            <div class="rounded-lg border border-iron-800 bg-iron-950/40 p-2.5">
+              <span class="block text-[10px] text-iron-500">Heat Number / Lot</span>
+              <strong class="mt-0.5 block font-mono text-xs text-iron-200">
+                {{ selectedInventoryDetail.heat_number || '-' }}
+              </strong>
+            </div>
+
+            <div class="rounded-lg border border-iron-800 bg-iron-950/40 p-2.5">
+              <span class="block text-[10px] text-iron-500">Bundle Tag SIKUTA</span>
+              <strong class="mt-0.5 block font-mono text-xs text-iron-200 truncate" :title="selectedInventoryDetail.bundle_tag">
+                {{ selectedInventoryDetail.bundle_tag || '-' }}
+              </strong>
+            </div>
+
+            <div class="rounded-lg border border-iron-800 bg-iron-950/40 p-2.5">
+              <span class="block text-[10px] text-iron-500">Total Bundel</span>
+              <strong class="mt-0.5 block font-mono text-xs text-iron-200">
+                {{ selectedInventoryDetail.qty_bundles }} Bundle
+              </strong>
+            </div>
+
+            <div class="rounded-lg border border-iron-800 bg-iron-950/40 p-2.5">
+              <span class="block text-[10px] text-iron-500">Total Batang (Pcs)</span>
+              <strong class="mt-0.5 block font-mono text-xs text-iron-200">
+                {{ selectedInventoryDetail.qty_pcs }} Pcs
+              </strong>
+            </div>
+
+            <div class="rounded-lg border border-iron-800 bg-iron-950/40 p-2.5">
+              <span class="block text-[10px] text-iron-500">Total Berat</span>
+              <strong class="mt-0.5 block font-mono text-xs text-iron-200">
+                {{ (Number(selectedInventoryDetail.total_weight_kg || 0) / 1000).toFixed(2) }} Ton
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tombol Tutup Footer -->
+        <div class="pt-2 border-t border-iron-800 flex justify-end">
+          <button
+            type="button"
+            @click="selectedInventoryDetail = null"
+            class="w-full sm:w-auto rounded-lg bg-steel-blue hover:bg-steel-blue-light px-5 py-2.5 text-xs font-bold text-white transition shadow-sm"
+          >
+            Tutup Rincian
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -437,6 +630,17 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['open-inbound-with-rack', 'open-outbound', 'open-relocate']);
+
+const selectedInventoryDetail = ref(null);
+const copiedCode = ref(false);
+
+const copySapCode = (code) => {
+  if (!code) return;
+  navigator.clipboard.writeText(code).then(() => {
+    copiedCode.value = true;
+    setTimeout(() => { copiedCode.value = false; }, 2000);
+  });
+};
 
 const activeWarehouseCode = ref('GUDANG-1');
 const selectedBlockId = ref(null);
@@ -620,4 +824,50 @@ function triggerRelocateFromBlock() {
   selectedBlockData.value = null;
   emit('open-relocate');
 }
+
+const isPipeDrat = (item) => {
+  const p = item.product;
+  if (p?.is_threaded) return true;
+  const desc = (item.description || p?.description || '').toUpperCase();
+  if (desc.includes('THRD') || desc.includes('THREAD') || desc.includes('DRAT')) {
+    if (!desc.includes('NON-DRAT') && !desc.includes('NON DRAT')) return true;
+  }
+  const code = (p?.sap_code || '').toUpperCase();
+  if (/^[GH][12]B10/i.test(code)) return true;
+  const jenis = (p?.jenis || '').toUpperCase();
+  if (jenis.includes('DRAT') && !jenis.includes('NON-DRAT') && !jenis.includes('NON DRAT')) return true;
+  return false;
+};
+
+const pipeEasyName = (item) => {
+  const p = item.product;
+  if (!p) return item.bundle_tag;
+
+  const isDrat = isPipeDrat(item);
+
+  if (p.nama_mudah) {
+    let name = p.nama_mudah.replace(/\bNON[-\s]?DRAT\b/gi, '').replace(/\s+/g, ' ').trim();
+    if (isDrat && !name.toUpperCase().includes('DRAT')) {
+      name = name.replace(/^(PIPA\s+(?:GALVA|HITAM|GALVANIS))/i, '$1 DRAT');
+    }
+    return name;
+  }
+
+  let jenis = p.jenis || (p.category?.toUpperCase().includes('GALVA') ? 'PIPA GALVA' : 'PIPA HITAM');
+  jenis = jenis.replace(/\bNON[-\s]?DRAT\b/gi, '').replace(/\s+/g, ' ').trim();
+
+  if (isDrat && !jenis.toUpperCase().includes('DRAT')) {
+    jenis += ' DRAT';
+  }
+
+  return [jenis, p.nominal_size, p.spec_name, p.sap_code].filter(Boolean).join(' ');
+};
+
+const pipeDescription = (item) => {
+  if (item.description) return item.description;
+  if (item.product?.description) return item.product.description;
+  const p = item.product;
+  if (!p) return '-';
+  return [p.sap_code, p.nominal_size, p.spec_name].filter(Boolean).join(' · ');
+};
 </script>

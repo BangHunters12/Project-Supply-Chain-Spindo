@@ -189,7 +189,19 @@ async function handleSyncSikuta() {
   syncing.value = true;
   showToast('⏳ Sinkronisasi SIKUTA dimulai... mohon tunggu.');
   try {
-    const res = await fetch('/api/wms/sync', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ table: 'all' }) });
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    if (csrfToken) {
+      headers['X-CSRF-TOKEN'] = csrfToken;
+    }
+    const res = await fetch('/api/wms/sync', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ table: 'all' })
+    });
     const json = await res.json();
     if (res.ok && json.status === 'success') {
       syncDetail.value = { success: true, message: json.message, d: json.data?.detail || {} };

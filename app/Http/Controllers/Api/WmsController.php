@@ -26,6 +26,9 @@ class WmsController extends Controller
      */
     public function syncFromAppSheet(Request $request): JsonResponse
     {
+        // Allow up to 5 minutes for SIKUTA API sync
+        set_time_limit(300);
+
         try {
             $appSheet = app(\App\Services\AppSheetService::class);
             $table = $request->input('table', 'all');

@@ -235,15 +235,42 @@ class SyncAppSheetData extends Command
                     $ukuran = $row['Ukuran'] ?? '';
                     $pcsPerBundle = $this->getPcsPerBundle($ukuran);
 
+                    $deskripsi = $row['Deskripsi'] ?? null;
+                    $pengerjaan = $row['Pengerjaan'] ?? '';
+                    $class = $row['Class'] ?? '';
+
+                    $descUpper = strtoupper(($deskripsi ?? '') . ' ' . $jenis . ' ' . $pengerjaan . ' ' . $class);
+                    $isThreaded = false;
+                    if ((str_contains($descUpper, 'THRD') || str_contains($descUpper, 'THREAD') || str_contains($descUpper, 'DRAT'))
+                        && !str_contains($descUpper, 'NON-DRAT') && !str_contains($descUpper, 'NON DRAT')) {
+                        $isThreaded = true;
+                    }
+                    if (preg_match('/^[GH][12]B10/i', (string) $kodeProduk)) {
+                        $isThreaded = true;
+                    }
+
+                    $namaMudah = $row['Nama Mudah'] ?? null;
+                    if ($namaMudah) {
+                        $namaMudah = trim(preg_replace('/\bNON[-\s]?DRAT\b/i', '', $namaMudah));
+                        $namaMudah = preg_replace('/\s+/', ' ', $namaMudah);
+                        if ($isThreaded && !str_contains(strtoupper($namaMudah), 'DRAT')) {
+                            $namaMudah = preg_replace('/^(PIPA\s+(?:GALVA|HITAM|GALVANIS))/i', '$1 DRAT', $namaMudah);
+                        }
+                    }
+
                     PipeProduct::updateOrCreate(
                         ['sap_code' => $kodeProduk],
                         [
                             'pipe_category_id' => $category->id,
+                            'nama_mudah' => $namaMudah,
+                            'description' => $deskripsi,
+                            'jenis' => $jenis,
                             'nominal_size' => $ukuran,
                             'spec_name' => $row['Class'] ?? $row['Pengerjaan'] ?? '',
                             'outer_diameter_mm' => 0,
                             'wall_thickness_min' => 0,
                             'wall_thickness_max' => 0,
+                            'is_threaded' => $isThreaded,
                             'pcs_per_bundle' => $pcsPerBundle,
                             'length_meters' => 6.00,
                         ]
@@ -311,9 +338,28 @@ class SyncAppSheetData extends Command
 
             // Create or update inventory record for this block
             $kodeMaterial = $row['Kode Material'] ?? 'UNKNOWN';
-            
+            $deskripsiSikuta = $row['Deskripsi'] ?? null;
+            $jenisPipa = $row['Jenis Pipa'] ?? 'PIPA';
+
             if ($totalStok > 0) {
                 $product = PipeProduct::where('sap_code', $kodeMaterial)->first();
+
+                $descUpper = strtoupper($deskripsiSikuta ?? '');
+                $jenisUpper = strtoupper($jenisPipa ?? '');
+                $codeUpper = strtoupper($kodeMaterial ?? '');
+
+                $isThreaded = (
+                    str_contains($descUpper, 'THRD') ||
+                    str_contains($descUpper, 'THREAD') ||
+                    (str_contains($descUpper, 'DRAT') && !str_contains($descUpper, 'NON-DRAT') && !str_contains($descUpper, 'NON DRAT')) ||
+                    (str_contains($jenisUpper, 'DRAT') && !str_contains($jenisUpper, 'NON-DRAT') && !str_contains($jenisUpper, 'NON DRAT')) ||
+                    preg_match('/^[GH][12]B10/i', $codeUpper)
+                );
+
+                $cleanJenis = trim(preg_replace('/\bNON[-\s]?DRAT\b/i', '', $jenisPipa));
+                if ($isThreaded && !str_contains(strtoupper($cleanJenis), 'DRAT')) {
+                    $cleanJenis .= ' DRAT';
+                }
 
                 if ($product) {
                     $ukuranSikuta = $row['Ukuran'] ?? '';
@@ -333,6 +379,12 @@ class SyncAppSheetData extends Command
                     if (!empty($kelasSikuta) && $kelasSikuta !== $product->spec_name) {
                         $updates['spec_name'] = $kelasSikuta;
                     }
+                    if (!empty($deskripsiSikuta)) {
+                        $updates['description'] = $deskripsiSikuta;
+                    }
+                    $updates['is_threaded'] = $isThreaded;
+                    $updates['jenis'] = $cleanJenis;
+                    $updates['nama_mudah'] = trim("{$cleanJenis} " . ($ukuranSikuta ?: $product->nominal_size) . " " . ($kelasSikuta ?: $product->spec_name) . " {$product->sap_code}");
 
                     if (!empty($updates)) {
                         $product->update($updates);
@@ -341,7 +393,6 @@ class SyncAppSheetData extends Command
 
                 if (!$product) {
                     // Create a placeholder product
-                    $jenisPipa = $row['Jenis Pipa'] ?? 'PIPA';
                     $categoryCode = str_contains(strtoupper($jenisPipa), 'GALVA') ? 'PG' : 'PH';
                     $category = PipeCategory::firstOrCreate(
                         ['code' => $categoryCode],
@@ -354,11 +405,15 @@ class SyncAppSheetData extends Command
                     $product = PipeProduct::create([
                         'pipe_category_id' => $category->id,
                         'sap_code' => $kodeMaterial,
+                        'nama_mudah' => trim("{$cleanJenis} {$ukuran} " . ($row['Kelas'] ?? '') . " {$kodeMaterial}"),
+                        'description' => $deskripsiSikuta,
+                        'jenis' => $cleanJenis,
                         'nominal_size' => $ukuran,
                         'spec_name' => $row['Kelas'] ?? '',
                         'outer_diameter_mm' => 0,
                         'wall_thickness_min' => 0,
                         'wall_thickness_max' => 0,
+                        'is_threaded' => $isThreaded,
                         'pcs_per_bundle' => $pcsPerBundle,
                         'length_meters' => 6.00,
                     ]);
@@ -385,6 +440,7 @@ class SyncAppSheetData extends Command
                         'total_weight_kg' => $tonaseKg,
                         'status' => 'AVAILABLE',
                         'qc_status' => 'PASSED',
+                        'description' => $deskripsiSikuta ?: $product->description,
                         'inbound_date' => now()->toDateString(),
                         'sikuta_kode_material' => $kodeMaterial,
                         'status_fifo' => $row['Status FIFO'] ?? null,

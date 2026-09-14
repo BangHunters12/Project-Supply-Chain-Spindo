@@ -22,6 +22,7 @@ class PipeInventory extends Model
         'total_weight_kg',
         'status',
         'qc_status',
+        'description',
         'inbound_date',
         'sikuta_kode_material',
         'status_fifo',
