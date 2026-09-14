@@ -202,18 +202,27 @@ async function handleSyncSikuta() {
       headers,
       body: JSON.stringify({ table: 'all' })
     });
-    const json = await res.json();
+    let json = null;
+    try {
+      json = await res.json();
+    } catch {
+      throw new Error(`Server mengembalikan HTTP ${res.status}`);
+    }
+
     if (res.ok && json.status === 'success') {
       syncDetail.value = { success: true, message: json.message, d: json.data?.detail || {} };
       await loadMapData();
       await loadSyncStatus();
-    } else if (json.status === 'warning') {
+    } else if (json?.status === 'warning') {
       syncDetail.value = { success: false, message: json.message, d: json.data?.detail || {} };
+      await loadMapData();
+      await loadSyncStatus();
     } else {
-      showToast('⚠️ ' + (json.message || 'Gagal sync'));
+      showToast('⚠️ ' + (json?.message || 'Gagal sinkronisasi SIKUTA.'));
     }
-  } catch {
-    showToast('❌ Koneksi server bermasalah.');
+  } catch (err) {
+    console.error('Sync error:', err);
+    showToast('❌ ' + (err.message || 'Koneksi server bermasalah.'));
   } finally {
     syncing.value = false;
   }

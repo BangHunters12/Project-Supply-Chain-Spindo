@@ -16,20 +16,29 @@ class AppSheetService
 
     public function __construct()
     {
-        $this->appId = config('appsheet.app_id');
-        $this->accessKey = config('appsheet.access_key');
-        
-        // Hardcode URL langsung — env variable di Railway bisa kosong dan override default
+        $rawAppId = config('appsheet.app_id');
+        $rawAccessKey = config('appsheet.access_key');
+
+        if (str_starts_with((string)$rawAppId, 'V2-')) {
+            $this->accessKey = (string)$rawAppId;
+            $this->appId = !empty($rawAccessKey) && !str_starts_with((string)$rawAccessKey, 'V2-')
+                ? (string)$rawAccessKey
+                : '2841436f-c0cd-42c3-809b-f9e80fe52c00';
+        } else {
+            $this->appId = !empty($rawAppId) ? (string)$rawAppId : '2841436f-c0cd-42c3-809b-f9e80fe52c00';
+            $this->accessKey = !empty($rawAccessKey) ? (string)$rawAccessKey : 'V2-C4zaU-X6pyF-dPF95-g9QXG-XvFI6-jN0W7-31l1X-LyNuZ';
+        }
+
         $configUrl = config('appsheet.proxy_url');
         $this->proxyUrl = !empty($configUrl)
             ? $configUrl
             : 'https://script.google.com/macros/s/AKfycbwoqlBOLBHuq4iHDoD5Pq6yMKL4rddAgRrYEjmkWPjya-aIn4l_T6DSznSdIeTtznT1/exec';
-        
+
         $this->useDemo = false;
     }
 
     /**
-     * Test koneksi ke AppSheet API via proxy
+     * Test koneksi ke AppSheet API
      */
     public function testConnection(): array
     {
@@ -41,31 +50,68 @@ class AppSheetService
             ];
         }
 
-        if (empty($this->proxyUrl)) {
-            return [
-                'connected' => false,
-                'mode' => 'error',
-                'message' => 'APPSHEET_PROXY_URL belum dikonfigurasi.',
-            ];
+        // Test direct official AppSheet API first
+        if (!empty($this->appId) && !empty($this->accessKey)) {
+            try {
+                $url = "https://api.appsheet.com/api/v2/apps/{$this->appId}/tables/" . rawurlencode('DATA Gudang') . "/Action";
+                $postData = json_encode([
+                    'Action' => 'Find',
+                    'Properties' => ['Locale' => 'id-ID', 'Timezone' => 'Asia/Jakarta'],
+                    'Rows' => [],
+                ]);
+
+                $ch = curl_init($url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    "ApplicationAccessKey: {$this->accessKey}",
+                    "Content-Type: application/json",
+                ]);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+
+                $res = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+                if ($httpCode === 200 && !empty($res)) {
+                    return [
+                        'connected' => true,
+                        'mode' => 'live',
+                        'message' => 'Koneksi ke AppSheet SIKUTA berhasil! (Direct API)',
+                    ];
+                }
+            } catch (\Exception $e) {
+                Log::warning('[AppSheet] Direct test error: ' . $e->getMessage());
+            }
         }
 
-        try {
-            $response = Http::withoutVerifying()->timeout(10)->get($this->proxyUrl);
+        // Fallback: Test via proxy
+        if (!empty($this->proxyUrl)) {
+            try {
+                $response = Http::withoutVerifying()->timeout(10)->get($this->proxyUrl);
 
-            return [
-                'connected' => $response->successful(),
-                'mode' => 'live',
-                'message' => $response->successful()
-                    ? 'Koneksi ke AppSheet SIKUTA berhasil!'
-                    : 'Proxy tersedia tapi respons tidak valid. HTTP ' . $response->status() . ' - Body: ' . substr($response->body(), 0, 150),
-            ];
-        } catch (\Exception $e) {
-            return [
-                'connected' => false,
-                'mode' => 'error',
-                'message' => 'Gagal terhubung: ' . $e->getMessage(),
-            ];
+                return [
+                    'connected' => $response->successful(),
+                    'mode' => 'live',
+                    'message' => $response->successful()
+                        ? 'Koneksi ke AppSheet SIKUTA berhasil via proxy!'
+                        : 'Proxy tersedia tapi respons tidak valid. HTTP ' . $response->status(),
+                ];
+            } catch (\Exception $e) {
+                return [
+                    'connected' => false,
+                    'mode' => 'error',
+                    'message' => 'Gagal terhubung: ' . $e->getMessage(),
+                ];
+            }
         }
+
+        return [
+            'connected' => false,
+            'mode' => 'error',
+            'message' => 'Konfigurasi AppSheet API tidak lengkap.',
+        ];
     }
 
     /**
@@ -80,64 +126,99 @@ class AppSheetService
             return collect([]);
         }
 
-        try {
-            // Increase memory limit for large tables
-            $previousMemoryLimit = ini_get('memory_limit');
-            ini_set('memory_limit', '512M');
+        $previousMemoryLimit = ini_get('memory_limit');
+        ini_set('memory_limit', '512M');
 
-            Log::info("[AppSheet] Requesting table: {$tableName} from proxy");
+        // 1. Direct AppSheet API (Primary - FAST & RELIABLE)
+        if (!empty($this->appId) && !empty($this->accessKey)) {
+            try {
+                Log::info("[AppSheet] Fetching table: {$tableName} via direct AppSheet API");
+                $url = "https://api.appsheet.com/api/v2/apps/{$this->appId}/tables/" . rawurlencode($tableName) . "/Action";
+                $postData = json_encode([
+                    'Action' => 'Find',
+                    'Properties' => [
+                        'Locale' => 'id-ID',
+                        'Timezone' => 'Asia/Jakarta',
+                    ],
+                    'Rows' => [],
+                ]);
 
-            // Use file_get_contents instead of Guzzle — Google Apps Script
-            // redirects POST→GET which breaks Guzzle's handling.
-            // file_get_contents follows redirects natively and works correctly.
-            $postData = json_encode([
-                'tableName' => $tableName,
-                'action' => 'Find',
-                'filters' => [],
-            ]);
+                $ch = curl_init($url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    "ApplicationAccessKey: {$this->accessKey}",
+                    "Content-Type: application/json",
+                ]);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 90);
 
-            $context = stream_context_create([
-                'http' => [
-                    'header'  => "Content-Type: application/json\r\n",
-                    'method'  => 'POST',
-                    'content' => $postData,
-                    'timeout' => 180,
-                    'follow_location' => true,
-                    'max_redirects' => 5,
-                ],
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                ],
-            ]);
+                $res = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-            $body = @file_get_contents($this->proxyUrl, false, $context);
+                if ($httpCode === 200 && !empty($res)) {
+                    Log::info("[AppSheet] Direct API received " . strlen($res) . " bytes for {$tableName}");
+                    $data = json_decode($res, true);
+                    unset($res);
 
-            if ($body === false) {
-                Log::warning("[AppSheet] Failed to fetch {$tableName}: file_get_contents returned false");
-                ini_set('memory_limit', $previousMemoryLimit);
-                return collect([]);
+                    if (is_array($data)) {
+                        Log::info("[AppSheet] Direct API successfully parsed " . count($data) . " rows for {$tableName}");
+                        ini_set('memory_limit', $previousMemoryLimit);
+                        return collect($data);
+                    }
+                }
+
+                Log::warning("[AppSheet] Direct API returned HTTP {$httpCode} for {$tableName}, trying fallback proxy...");
+            } catch (\Exception $e) {
+                Log::warning("[AppSheet] Direct API error for {$tableName}: " . $e->getMessage() . ", trying fallback proxy...");
             }
-
-            Log::info("[AppSheet] Response body length: " . strlen($body) . " bytes");
-
-            $data = json_decode($body, true);
-            unset($body); // Free memory
-
-            if (!is_array($data)) {
-                Log::warning("[AppSheet] Invalid JSON response for {$tableName}");
-                ini_set('memory_limit', $previousMemoryLimit);
-                return collect([]);
-            }
-
-            Log::info("[AppSheet] Fetched " . count($data) . " rows from: {$tableName}");
-
-            ini_set('memory_limit', $previousMemoryLimit);
-            return collect($data);
-        } catch (\Exception $e) {
-            Log::error("[AppSheet] Error fetching {$tableName}: " . $e->getMessage());
-            return collect([]);
         }
+
+        // 2. Fallback to Google Apps Script Proxy
+        if (!empty($this->proxyUrl)) {
+            try {
+                Log::info("[AppSheet] Requesting table: {$tableName} from proxy");
+                $postData = json_encode([
+                    'tableName' => $tableName,
+                    'action' => 'Find',
+                    'filters' => [],
+                ]);
+
+                $context = stream_context_create([
+                    'http' => [
+                        'header'  => "Content-Type: application/json\r\nContent-Length: " . strlen($postData) . "\r\n",
+                        'method'  => 'POST',
+                        'content' => $postData,
+                        'timeout' => 120,
+                        'follow_location' => true,
+                        'max_redirects' => 5,
+                    ],
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                    ],
+                ]);
+
+                $body = @file_get_contents($this->proxyUrl, false, $context);
+
+                if ($body !== false) {
+                    $data = json_decode($body, true);
+                    unset($body);
+
+                    if (is_array($data)) {
+                        Log::info("[AppSheet] Proxy fetched " . count($data) . " rows from: {$tableName}");
+                        ini_set('memory_limit', $previousMemoryLimit);
+                        return collect($data);
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error("[AppSheet] Proxy error for {$tableName}: " . $e->getMessage());
+            }
+        }
+
+        ini_set('memory_limit', $previousMemoryLimit);
+        return collect([]);
     }
 
     /**
