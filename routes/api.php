@@ -12,4 +12,11 @@ Route::prefix('wms')->group(function () {
     // SIKUTA Sync
     Route::post('/sync', [WmsController::class, 'syncFromAppSheet']);
     Route::get('/sync-status', [WmsController::class, 'syncStatus']);
+    Route::get('/migrate', function () {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        return response()->json([
+            'status' => 'success',
+            'output' => \Illuminate\Support\Facades\Artisan::output(),
+        ]);
+    });
 });

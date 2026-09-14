@@ -30,6 +30,13 @@ class WmsController extends Controller
         set_time_limit(300);
 
         try {
+            // Run pending migrations to ensure columns exist on Railway
+            try {
+                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('[Auto-migrate] ' . $e->getMessage());
+            }
+
             $appSheet = app(\App\Services\AppSheetService::class);
             $table = $request->input('table', 'all');
 
